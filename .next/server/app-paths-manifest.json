@@ -1,7 +1,13 @@
 {
-  "/(pages)/bunker-management/page": "app/(pages)/bunker-management/page.js",
+  "/page": "app/page.js",
+  "/(pages)/dashboard/page": "app/(pages)/dashboard/page.js",
+  "/(pages)/login/page": "app/(pages)/login/page.js",
+  "/(pages)/add-new-batch/page": "app/(pages)/add-new-batch/page.js",
+  "/(pages)/soaking/page": "app/(pages)/soaking/page.js",
   "/(pages)/unified-platform/page": "app/(pages)/unified-platform/page.js",
-  "/(pages)/create-user/page": "app/(pages)/create-user/page.js",
+  "/(pages)/bunker-management/page": "app/(pages)/bunker-management/page.js",
+  "/(pages)/tunnel-management/page": "app/(pages)/tunnel-management/page.js",
+  "/(pages)/batch-reports/page": "app/(pages)/batch-reports/page.js",
   "/(pages)/batch-details/page": "app/(pages)/batch-details/page.js",
-  "/(pages)/tunnel-management/page": "app/(pages)/tunnel-management/page.js"
+  "/(pages)/create-user/page": "app/(pages)/create-user/page.js"
 }

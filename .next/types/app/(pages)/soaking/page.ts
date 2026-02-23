@@ -1,4 +1,4 @@
-// File: C:\Users\Admin\Downloads\britishagro-admin-panel\britishagro\app\(pages)\soaking\page.jsx
+// File: D:\bri-agro-admin\app\(pages)\soaking\page.jsx
 import * as entry from '../../../../../app/(pages)/soaking/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

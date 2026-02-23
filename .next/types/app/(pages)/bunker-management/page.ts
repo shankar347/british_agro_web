@@ -1,4 +1,4 @@
-// File: C:\Users\Admin\Downloads\britishagro-admin-panel\britishagro\app\(pages)\bunker-management\page.jsx
+// File: D:\bri-agro-admin\app\(pages)\bunker-management\page.jsx
 import * as entry from '../../../../../app/(pages)/bunker-management/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

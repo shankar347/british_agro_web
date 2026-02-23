@@ -1,4 +1,4 @@
-// File: C:\Users\Admin\Downloads\britishagro-admin-panel\britishagro\app\(pages)\layout.jsx
+// File: D:\bri-agro-admin\app\(pages)\layout.jsx
 import * as entry from '../../../../app/(pages)/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

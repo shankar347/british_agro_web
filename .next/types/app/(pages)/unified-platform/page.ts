@@ -1,4 +1,4 @@
-// File: C:\Users\Admin\Downloads\britishagro-admin-panel\britishagro\app\(pages)\unified-platform\page.jsx
+// File: D:\bri-agro-admin\app\(pages)\unified-platform\page.jsx
 import * as entry from '../../../../../app/(pages)/unified-platform/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

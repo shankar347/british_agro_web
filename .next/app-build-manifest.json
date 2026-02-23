@@ -6,22 +6,21 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
     "/(pages)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(pages)/layout.js"
     ],
-    "/(pages)/create-user/page": [
+    "/(pages)/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/(pages)/create-user/page.css",
-      "static/chunks/app/(pages)/create-user/page.js"
-    ],
-    "/(pages)/batch-details/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/(pages)/batch-details/page.css",
-      "static/chunks/app/(pages)/batch-details/page.js"
+      "static/css/app/(pages)/login/page.css",
+      "static/chunks/app/(pages)/login/page.js"
     ],
     "/(pages)/dashboard/page": [
       "static/chunks/webpack.js",
@@ -29,11 +28,11 @@
       "static/css/app/(pages)/dashboard/page.css",
       "static/chunks/app/(pages)/dashboard/page.js"
     ],
-    "/(pages)/unified-platform/page": [
+    "/(pages)/add-new-batch/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/(pages)/unified-platform/page.css",
-      "static/chunks/app/(pages)/unified-platform/page.js"
+      "static/css/app/(pages)/add-new-batch/page.css",
+      "static/chunks/app/(pages)/add-new-batch/page.js"
     ],
     "/(pages)/soaking/page": [
       "static/chunks/webpack.js",
@@ -41,17 +40,11 @@
       "static/css/app/(pages)/soaking/page.css",
       "static/chunks/app/(pages)/soaking/page.js"
     ],
-    "/(pages)/add-new-batch/page": [
+    "/(pages)/unified-platform/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/(pages)/add-new-batch/page.css",
-      "static/chunks/app/(pages)/add-new-batch/page.js"
-    ],
-    "/(pages)/bunker-details/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/(pages)/bunker-details/page.css",
-      "static/chunks/app/(pages)/bunker-details/page.js"
+      "static/css/app/(pages)/unified-platform/page.css",
+      "static/chunks/app/(pages)/unified-platform/page.js"
     ],
     "/(pages)/bunker-management/page": [
       "static/chunks/webpack.js",
@@ -65,17 +58,23 @@
       "static/css/app/(pages)/tunnel-management/page.css",
       "static/chunks/app/(pages)/tunnel-management/page.js"
     ],
-    "/(pages)/forecast/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/(pages)/forecast/page.css",
-      "static/chunks/app/(pages)/forecast/page.js"
-    ],
     "/(pages)/batch-reports/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/(pages)/batch-reports/page.css",
       "static/chunks/app/(pages)/batch-reports/page.js"
+    ],
+    "/(pages)/batch-details/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(pages)/batch-details/page.css",
+      "static/chunks/app/(pages)/batch-details/page.js"
+    ],
+    "/(pages)/create-user/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(pages)/create-user/page.css",
+      "static/chunks/app/(pages)/create-user/page.js"
     ]
   }
 }
