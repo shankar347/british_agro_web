@@ -1,0 +1,7 @@
+{
+  "/(pages)/bunker-management/page": "app/(pages)/bunker-management/page.js",
+  "/(pages)/unified-platform/page": "app/(pages)/unified-platform/page.js",
+  "/(pages)/create-user/page": "app/(pages)/create-user/page.js",
+  "/(pages)/batch-details/page": "app/(pages)/batch-details/page.js",
+  "/(pages)/tunnel-management/page": "app/(pages)/tunnel-management/page.js"
+}

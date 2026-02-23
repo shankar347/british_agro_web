@@ -1,0 +1,11 @@
+.bunker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.bunker-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.bunker-card-title { font-size: 1rem; font-weight: 700; }
+.bunker-cap-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-light); margin-bottom: 5px; }
+.bunker-cap-track { background: var(--border); border-radius: 20px; height: 6px; overflow: hidden; margin-bottom: 12px; }
+.bunker-cap-fill { height: 100%; border-radius: 20px; transition: width 0.3s; }
+.bunker-mini-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.bunker-mini-stat { text-align: center; background: var(--page-bg); border-radius: 6px; padding: 8px 4px; }
+.bunker-mini-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 2px; }
+.bunker-mini-value { font-size: 0.95rem; font-weight: 700; }
+.bunker-summary-title { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
