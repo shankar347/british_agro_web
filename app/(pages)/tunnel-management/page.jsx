@@ -7,6 +7,13 @@ import "../../styles/pages/unified-platform.css";
 
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import Button from '@mui/material/Button';
 
 const MATERIAL_TYPES = {
   'BAGASSE': 'BAGASSE',
@@ -330,6 +337,61 @@ const sendToApi = async (payload, materialType, displayName) => {
   } catch (error) {
     console.error(` ERROR sending ${displayName} data:`, error);
     return { success: false, error: error.message, materialType, displayName };
+  }
+};
+
+const completeBatch = async (batchId) => {
+  try {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    
+    const payload = {
+      planned_comp_date: currentDateTime,
+      planned_comp_time: currentDateTime,
+      status: "completed",
+      current_stage: "completed"
+    };
+
+    console.log('Completing batch with payload:', payload);
+
+    const response = await fetch(`${BATCH_FETCH_ENDPOINT}/${batchId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      console.error(' Batch completion API Error Response:', errorData);
+      
+      let errorMessage = `API error: ${response.status}`;
+      if (errorData.detail) {
+        if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map(err => err.msg).join(', ');
+        } else if (typeof errorData.detail === 'object') {
+          errorMessage = JSON.stringify(errorData.detail);
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error(' Error completing batch:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -683,10 +745,13 @@ function TunnelManagementContent() {
   const searchParams = useSearchParams();
   const [currentBatch, setCurrentBatch] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [error, setError] = useState(null);
   const [initialBatchNumber, setInitialBatchNumber] = useState(null);
   const [initialBatchId, setInitialBatchId] = useState(null);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const isSavingRef = useRef(false);
+  const isCompletingRef = useRef(false);
 
   useEffect(() => {
     const batchNum = searchParams.get('batch');
@@ -773,6 +838,54 @@ function TunnelManagementContent() {
     }
   };
 
+  const handleOpenCompleteDialog = () => {
+    setCompleteDialogOpen(true);
+  };
+
+  const handleCloseCompleteDialog = () => {
+    setCompleteDialogOpen(false);
+  };
+
+const handleCompleteProcess = async () => {
+  if (!currentBatch || isCompletingRef.current) return;
+
+  handleCloseCompleteDialog();
+  isCompletingRef.current = true;
+  setCompleting(true);
+
+  try {
+    const result = await completeBatch(currentBatch.id);
+
+    if (result.success) {
+      toast.success('Batch marked as completed successfully!');
+      
+      if (result.data && result.data.data) {
+        setCurrentBatch(prev => ({
+          ...prev,
+          batchData: {
+            ...prev.batchData,
+            ...result.data.data
+          }
+        }));
+      }
+
+      setTimeout(() => {
+        router.push(`/batch-reports?batchId=${currentBatch.id}`);
+      }, 1500);
+    } else {
+      toast.error(`Failed to complete batch: ${result.error}`);
+    }
+  } catch (error) {
+    toast.error('Error completing batch');
+    console.error(' Complete process error:', error);
+  } finally {
+    setCompleting(false);
+    setTimeout(() => {
+      isCompletingRef.current = false;
+    }, 1000);
+  }
+};
+
   const handleBackToSelection = () => {
     setCurrentBatch(null);
     router.push('/tunnel-management');
@@ -816,10 +929,30 @@ function TunnelManagementContent() {
             <button 
               onClick={handleSave} 
               className="btn-save"
-              disabled={loading}
+              disabled={loading || completing}
             >
               <SaveIcon fontSize="small" />
               {loading ? 'Saving...' : 'Save'}
+            </button>
+            <button 
+              onClick={handleOpenCompleteDialog} 
+              className="btn-complete"
+              disabled={completing || loading}
+              style={{
+                marginLeft: '10px',
+                backgroundColor: '#4caf50',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                cursor: completing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <CheckCircleIcon fontSize="small" />
+              {completing ? 'Completing...' : 'Complete Process'}
             </button>
           </div>
         </div>
@@ -829,6 +962,37 @@ function TunnelManagementContent() {
           onUpdate={handleUpdateBatch}
           readOnly={false}
         />
+
+        <Dialog
+          open={completeDialogOpen}
+          onClose={handleCloseCompleteDialog}
+          aria-labelledby="complete-dialog-title"
+          aria-describedby="complete-dialog-description"
+        >
+          <DialogTitle id="complete-dialog-title">
+            Confirm Batch Completion
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="complete-dialog-description">
+              Are you sure you want to mark this batch as completed? 
+              This will update the planned completion date/time to the current time, 
+              set the status to completed, and redirect you to the batch reports page.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseCompleteDialog} color="primary">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCompleteProcess} 
+              color="primary" 
+              variant="contained"
+              autoFocus
+            >
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </div>
     </AppLayout>
   );
