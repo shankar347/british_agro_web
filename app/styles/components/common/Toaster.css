@@ -1,0 +1,155 @@
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.toast {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  pointer-events: auto;
+  animation-duration: 0.3s;
+  animation-fill-mode: forwards;
+  width: 100%;
+  position: relative;
+}
+
+.toast-enter {
+  animation-name: slideIn;
+}
+
+.toast-exit {
+  animation-name: slideOut;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 12px;
+}
+
+.toast-icon {
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.toast-success .toast-icon {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.toast-error .toast-icon {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.toast-warning .toast-icon {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.toast-info .toast-icon {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.toast-message {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.toast-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.toast-progress-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width 0.1s linear;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.toast-success .toast-progress-bar {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.toast-error .toast-progress-bar {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.toast-warning .toast-progress-bar {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.toast-info .toast-progress-bar {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+}
