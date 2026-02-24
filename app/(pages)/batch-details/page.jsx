@@ -48,11 +48,13 @@ export default function AddBatchToBunker() {
         const result = await response.json();
         
         if (Array.isArray(result)) {
-          setBatches(result);
+          setBatches(
+            result.sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+          );
         } else if (result.success) {
-          setBatches(result.data);
-        } else {
-          throw new Error(result.message || 'Failed to fetch batches');
+          setBatches(
+            result.data.sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+          );
         }
       } catch (err) {
         setError(err.message);

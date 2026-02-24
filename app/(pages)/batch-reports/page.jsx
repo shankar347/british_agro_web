@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "../../components/AppLayout";
 import { ToastProvider, useToast } from "../../components/common/Toaster";
 import "../../styles/pages/batch-reports.css";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import PropTypes from 'prop-types';
 
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
-import ShareIcon from '@mui/icons-material/Share';
 import SearchIcon from '@mui/icons-material/Search';
 import GrainIcon from '@mui/icons-material/Grain';
 import ScaleIcon from '@mui/icons-material/Scale';
@@ -21,761 +23,546 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingIcon from '@mui/icons-material/Pending';
 import ErrorIcon from '@mui/icons-material/Error';
-import StorageIcon from '@mui/icons-material/Storage';
-// import TunnelIcon from '@mui/icons-material/Tunnel';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import ShowChartIcon from '@mui/icons-material/ShowChart';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PersonIcon from '@mui/icons-material/Person';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableChartIcon from '@mui/icons-material/TableChart';
 
-const ReportsRepo = {
-  GetFullBatchReport: async (batchId) => {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+const ALL_MATERIALS = [
+  { id: 1, name: "PADDY STRAW" },
+  { id: 2, name: "WHEAT STRAW" },
+  { id: 3, name: "BAGASSE" },
+  { id: 4, name: "WHEAT BRAN" },
+  { id: 5, name: "SUNFLOWER CAKE" },
+  { id: 6, name: "O/P - C/M -1 TENI" },
+  { id: 7, name: "O/P C/M-2" },
+  { id: 8, name: "GYPSUM" },
+  { id: 9, name: "UREA" },
+  { id: 10, name: "AMMONIUM SULPHATE" },
+  { id: 11, name: "SS PHOSPHATE" }
+];
+
+const OPERATION_STAGES = [
+  { id: 1, name: "SOAKING", apiKey: "soaking" },
+  { id: 2, name: "RESOAKING 1", apiKey: "resoaking_one" },
+  { id: 3, name: "RESOAKING 2", apiKey: "resoaking_two" },
+  { id: 4, name: "PLAIN BUNKER", apiKey: "plain_bunker" },
+  { id: 5, name: "LONG HEAP", apiKey: "long_heap" },
+  { id: 6, name: "DRY MIXING", apiKey: "dry_mixing" },
+  { id: 7, name: "BP 1", apiKey: "bunker_process1" },
+  { id: 8, name: "BP 2", apiKey: "bunker_process2" },
+  { id: 9, name: "BP 3", apiKey: "bunker_process3" },
+  { id: 10, name: "TP", apiKey: "tunnel_process" }
+];
+
+function formatWithCommas(value) {
+  if (value === "" || value === null || value === undefined) return "";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "";
+  return Math.round(num).toLocaleString("en-IN");
+}
+
+function parseDateTime(dateTimeStr) {
+  if (!dateTimeStr) return { date: '', time: '' };
+  try {
+    const date = new Date(dateTimeStr);
+    if (isNaN(date.getTime())) return { date: '', time: '' };
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
     return {
-      batchInfo: {
-        id: batchId,
-        material: 'Wheat',
-        variety: 'Hard Red Winter',
-        supplier: 'AgriCorp Ltd',
-        receivedDate: '2026-02-15T10:30:00',
-        startDate: '2026-02-16T08:00:00',
-        endDate: '2026-02-19T16:00:00',
-        status: 'completed',
-        quality: 'Grade A',
-        moisture: 14.2,
-        temperature: 22.5
-      },
-      
-      formulation: {
-        totalWeight: 25000, // kg
-        targetMoisture: 45,
-        actualMoisture: 44.8,
-        waterAdded: 12500, // liters
-        additives: [
-          { name: 'Enzyme A', quantity: 25, unit: 'kg' },
-          { name: 'Preservative B', quantity: 15, unit: 'kg' },
-          { name: 'Nutrient Mix', quantity: 50, unit: 'kg' }
-        ],
-        totals: {
-          dryMatter: 25000,
-          waterContent: 11250,
-          totalWeight: 36250,
-          moisturePercentage: 44.8
-        }
-      },
-      
-      soakingReport: {
-        totalDuration: 72, // hours
-        targetDuration: 72,
-        straws: [
-          {
-            id: 1,
-            strawNumber: 'S-001',
-            startTime: '2026-02-16T08:00:00',
-            soakHours: 24,
-            restHours: 8,
-            totalHours: 32,
-            temperature: 22.5,
-            moisture: 42.3,
-            status: 'completed'
-          },
-          {
-            id: 2,
-            strawNumber: 'S-002',
-            startTime: '2026-02-16T09:30:00',
-            soakHours: 24,
-            restHours: 8,
-            totalHours: 32,
-            temperature: 23.1,
-            moisture: 43.1,
-            status: 'completed'
-          },
-          {
-            id: 3,
-            strawNumber: 'S-003',
-            startTime: '2026-02-16T11:00:00',
-            soakHours: 24,
-            restHours: 8,
-            totalHours: 32,
-            temperature: 22.8,
-            moisture: 42.7,
-            status: 'completed'
-          },
-          {
-            id: 4,
-            strawNumber: 'S-004',
-            startTime: '2026-02-16T13:00:00',
-            soakHours: 24,
-            restHours: 8,
-            totalHours: 32,
-            temperature: 23.2,
-            moisture: 43.4,
-            status: 'completed'
-          },
-          {
-            id: 5,
-            strawNumber: 'S-005',
-            startTime: '2026-02-16T14:30:00',
-            soakHours: 24,
-            restHours: 8,
-            totalHours: 32,
-            temperature: 22.9,
-            moisture: 42.9,
-            status: 'completed'
-          }
-        ],
-        summary: {
-          averageSoakHours: 24,
-          averageRestHours: 8,
-          averageMoisture: 42.88,
-          averageTemperature: 22.9
-        }
-      },
-      
-      processTimeline: {
-        bunkerHistory: [
-          {
-            id: 1,
-            bunkerNumber: 2,
-            startTime: '2026-02-17T08:00:00',
-            endTime: '2026-02-18T08:00:00',
-            duration: 24,
-            moisture: [42.3, 43.1, 43.8, 44.2],
-            temperature: [22.5, 22.8, 23.2, 23.5],
-            timestamps: [
-              '2026-02-17T08:00:00',
-              '2026-02-17T14:00:00',
-              '2026-02-17T20:00:00',
-              '2026-02-18T02:00:00'
-            ]
-          },
-          {
-            id: 2,
-            bunkerNumber: 4,
-            startTime: '2026-02-18T09:00:00',
-            endTime: '2026-02-19T09:00:00',
-            duration: 24,
-            moisture: [44.2, 44.6, 44.9, 45.1],
-            temperature: [23.5, 23.8, 24.1, 24.3],
-            timestamps: [
-              '2026-02-18T09:00:00',
-              '2026-02-18T15:00:00',
-              '2026-02-18T21:00:00',
-              '2026-02-19T03:00:00'
-            ]
-          }
-        ],
-        tunnelHistory: [
-          {
-            id: 1,
-            tunnelName: 'Tunnel A',
-            startTime: '2026-02-19T10:00:00',
-            endTime: '2026-02-19T18:00:00',
-            duration: 8,
-            temperature: [24.5, 24.8, 25.2, 24.9],
-            humidity: [55, 57, 58, 56],
-            timestamps: [
-              '2026-02-19T10:00:00',
-              '2026-02-19T12:00:00',
-              '2026-02-19T14:00:00',
-              '2026-02-19T16:00:00'
-            ]
-          }
-        ],
-        qualityChecks: [
-          { time: '2026-02-17T14:00:00', parameter: 'Moisture', value: 42.3, status: 'good' },
-          { time: '2026-02-18T02:00:00', parameter: 'Temperature', value: 23.5, status: 'good' },
-          { time: '2026-02-18T15:00:00', parameter: 'pH', value: 5.8, status: 'good' },
-          { time: '2026-02-19T03:00:00', parameter: 'Moisture', value: 45.1, status: 'good' },
-          { time: '2026-02-19T16:00:00', parameter: 'Final Check', value: 44.8, status: 'good' }
-        ]
-      },
-      
-      performance: {
-        cycleTime: 78, // hours
-        efficiency: 94.5, // percentage
-        yield: 23500, // kg
-        yieldPercentage: 94,
-        issues: []
-      }
+      date: `${year}-${month}-${day}`,
+      time: `${hours}:${minutes}`
     };
+  } catch (error) {
+    console.error('Error parsing datetime:', error);
+    return { date: '', time: '' };
   }
-};
+}
 
-// PropTypes definitions
-const batchInfoPropType = PropTypes.shape({
-  id: PropTypes.string.isRequired,
-  material: PropTypes.string.isRequired,
-  variety: PropTypes.string,
-  supplier: PropTypes.string,
-  receivedDate: PropTypes.string,
-  startDate: PropTypes.string,
-  endDate: PropTypes.string,
-  status: PropTypes.string,
-  quality: PropTypes.string,
-  moisture: PropTypes.number,
-  temperature: PropTypes.number
-});
+function calculateTotalHours(startDateTime, endDateTime) {
+  if (!startDateTime || !endDateTime) return '';
+  try {
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
+    
+    const diffHours = (end - start) / (1000 * 60 * 60);
+    return diffHours.toFixed(1);
+  } catch (error) {
+    console.error('Error calculating hours:', error);
+    return '';
+  }
+}
 
-const strawPropType = PropTypes.shape({
-  id: PropTypes.number.isRequired,
-  strawNumber: PropTypes.string.isRequired,
-  startTime: PropTypes.string.isRequired,
-  soakHours: PropTypes.number.isRequired,
-  restHours: PropTypes.number.isRequired,
-  totalHours: PropTypes.number.isRequired,
-  temperature: PropTypes.number,
-  moisture: PropTypes.number,
-  status: PropTypes.string.isRequired
-});
-
-// BatchHeader Component
-function BatchHeader({ batchInfo, formulation, performance }) {
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusBadge = (status) => {
-    switch(status) {
-      case 'completed':
-        return <span className="status-badge completed"><CheckCircleIcon /> Completed</span>;
-      case 'in-progress':
-        return <span className="status-badge in-progress"><PendingIcon /> In Progress</span>;
-      case 'failed':
-        return <span className="status-badge failed"><ErrorIcon /> Failed</span>;
-      default:
-        return <span className="status-badge">{status}</span>;
-    }
-  };
-
-  return (
-    <div className="batch-header">
-      <div className="header-top">
-        <div className="title-section">
-          <h1 className="batch-title">
-            <AssignmentIcon /> Batch Report: {batchInfo.id}
-          </h1>
-          {getStatusBadge(batchInfo.status)}
-        </div>
-
-        <div className="action-buttons">
-          <button className="action-btn">
-            <PrintIcon /> Print
-          </button>
-          <button className="action-btn">
-            <DownloadIcon /> Export PDF
-          </button>
-          <button className="action-btn">
-            <ShareIcon /> Share
-          </button>
-        </div>
-      </div>
-
-      <div className="batch-summary-cards">
-        <div className="summary-card">
-          <div className="card-icon material">
-            <GrainIcon />
-          </div>
-          <div className="card-content">
-            <span className="card-label">Material</span>
-            <span className="card-value">{batchInfo.material}</span>
-            <span className="card-subvalue">{batchInfo.variety}</span>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <div className="card-icon supplier">
-            <PersonIcon />
-          </div>
-          <div className="card-content">
-            <span className="card-label">Supplier</span>
-            <span className="card-value">{batchInfo.supplier}</span>
-            <span className="card-subvalue">Received: {formatDate(batchInfo.receivedDate).split(',')[0]}</span>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <div className="card-icon timeline">
-            <ScheduleIcon />
-          </div>
-          <div className="card-content">
-            <span className="card-label">Timeline</span>
-            <span className="card-value">Started: {formatDate(batchInfo.startDate).split(',')[0]}</span>
-            <span className="card-subvalue">Completed: {formatDate(batchInfo.endDate).split(',')[0]}</span>
-          </div>
-        </div>
-
-        <div className="summary-card">
-          <div className="card-icon performance">
-            <ShowChartIcon />
-          </div>
-          <div className="card-content">
-            <span className="card-label">Performance</span>
-            <span className="card-value">Efficiency: {performance.efficiency}%</span>
-            <span className="card-subvalue">Yield: {performance.yield.toLocaleString()} kg</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="formulation-summary">
-        <h3 className="section-title">Formulation Summary</h3>
-        <div className="formulation-grid">
-          <div className="formulation-item">
-            <ScaleIcon />
-            <div>
-              <span className="item-label">Total Dry Matter</span>
-              <span className="item-value">{formulation.totals.dryMatter.toLocaleString()} kg</span>
-            </div>
-          </div>
-          <div className="formulation-item">
-            <WaterDropIcon />
-            <div>
-              <span className="item-label">Water Added</span>
-              <span className="item-value">{formulation.waterAdded.toLocaleString()} L</span>
-            </div>
-          </div>
-          <div className="formulation-item">
-            <BatchPredictionIcon />
-            <div>
-              <span className="item-label">Target Moisture</span>
-              <span className="item-value">{formulation.targetMoisture}%</span>
-            </div>
-          </div>
-          <div className="formulation-item highlight">
-            <div>
-              <span className="item-label">Final Moisture</span>
-              <span className="item-value">{formulation.actualMoisture}%</span>
-            </div>
-          </div>
-        </div>
-
-        {formulation.additives.length > 0 && (
-          <div className="additives-section">
-            <h4>Additives</h4>
-            <div className="additives-list">
-              {formulation.additives.map((additive, index) => (
-                <span key={index} className="additive-tag">
-                  {additive.name}: {additive.quantity} {additive.unit}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+function findMatchingEntry(entries, materialName) {
+  if (!entries || !Array.isArray(entries)) return null;
+  return entries.find(entry => 
+    entry.name && entry.name.toUpperCase() === materialName
   );
 }
 
-BatchHeader.propTypes = {
-  batchInfo: batchInfoPropType.isRequired,
-  formulation: PropTypes.object.isRequired,
-  performance: PropTypes.object.isRequired
-};
-
-function SoakingReportTable({ soakingReport }) {
-  const formatTime = (dateString) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+function FormulationTable({ entries = [] }) {
+  const readOnlyStyle = { background: "#f0f4f8", cursor: "not-allowed" };
+  
+  const totalCellStyle = {
+    border: "1px solid",
+    fontWeight: "bold",
+    padding: "2px 3px",
+    textAlign: "center",
+    fontSize: "0.92em",
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  const totals = (entries || []).reduce((acc, entry) => {
+    acc.totalDryWt += entry.dry_weight || 0;
+    acc.totalN2 += entry.nitrogen_total || 0;
+    acc.totalAsh += entry.ash_total || 0;
+    return acc;
+  }, { totalDryWt: 0, totalN2: 0, totalAsh: 0 });
 
   return (
-    <div className="soaking-report">
-      <div className="report-header">
-        <h3 className="section-title">
-          <TimerIcon /> Soaking Report
-        </h3>
-        <div className="report-summary">
-          <span className="summary-chip">
-            Total Duration: {soakingReport.totalDuration} hours
-          </span>
-          <span className="summary-chip">
-            Target: {soakingReport.targetDuration} hours
-          </span>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <table className="soaking-table">
+    <div className="formulation-table-container">
+      <h3 className="table-title">Raw Materials Formulation</h3>
+      <div className="table-wrapper">
+        <table className="materials-table">
           <thead>
             <tr>
-              <th>Straw #</th>
-              <th>Start Date</th>
-              <th>Start Time</th>
-              <th>Soak Hours</th>
-              <th>Rest Hours</th>
-              <th>Total Hours</th>
-              <th>Temperature (°C)</th>
-              <th>Moisture (%)</th>
+              <th>S.NO</th>
+              <th>RAW MATERIALS</th>
+              <th>FRESH WEIGHT</th>
+              <th>MOIST %</th>
+              <th>DRY WT</th>
+              <th>N2 %</th>
+              <th>TOTAL N2</th>
+              <th>ASH %</th>
+              <th>TOTAL ASH</th>
+              <th>%</th>
             </tr>
           </thead>
           <tbody>
-            {soakingReport.straws.map((straw) => (
-              <tr key={straw.id}>
-                <td className="straw-number">{straw.strawNumber}</td>
-                <td>{formatDate(straw.startTime)}</td>
-                <td>{formatTime(straw.startTime)}</td>
-                <td className="hours-cell">{straw.soakHours}h</td>
-                <td className="hours-cell">{straw.restHours}h</td>
-                <td className="total-hours">{straw.totalHours}h</td>
-                <td>
-                  <span className="temp-value">{straw.temperature}°C</span>
-                </td>
-                <td>
-                  <span className="moisture-value">{straw.moisture}%</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="summary-row">
-              <td colSpan="3" className="summary-label">Average</td>
-              <td className="hours-cell">{soakingReport.summary.averageSoakHours}h</td>
-              <td className="hours-cell">{soakingReport.summary.averageRestHours}h</td>
-              <td className="total-hours">{soakingReport.summary.averageSoakHours + soakingReport.summary.averageRestHours}h</td>
-              <td>{soakingReport.summary.averageTemperature.toFixed(1)}°C</td>
-              <td>{soakingReport.summary.averageMoisture.toFixed(1)}%</td>
+            {ALL_MATERIALS.map((material) => {
+              const entry = findMatchingEntry(entries, material.name);
+              
+              return (
+                <tr key={material.id}>
+                  <td>{material.id}</td>
+                  <td>{material.name}</td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.wet_weight ? formatWithCommas(entry.wet_weight) : "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.moisture_percent || "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.dry_weight ? formatWithCommas(entry.dry_weight) : "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.nitrogen_percent || "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.nitrogen_total ? formatWithCommas(entry.nitrogen_total) : "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.ash_percent || "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.ash_total ? formatWithCommas(entry.ash_total) : "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={entry?.total_percent || "-"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="totals-row">
+              <td colSpan={4} style={{textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
+              <td style={totalCellStyle}>
+                {totals.totalDryWt > 0 ? formatWithCommas(totals.totalDryWt) : ""}
+              </td>
+              <td></td>
+              <td style={totalCellStyle}>
+                {totals.totalN2 > 0 ? formatWithCommas(totals.totalN2) : ""}
+              </td>
+              <td></td>
+              <td style={totalCellStyle}>
+                {totals.totalAsh > 0 ? formatWithCommas(totals.totalAsh) : ""}
+              </td>
+              <td></td>
             </tr>
-          </tfoot>
+          </tbody>
         </table>
       </div>
 
-      <div className="soaking-stats">
-        <div className="stat-row">
-          <span className="stat-label">Soak/Rest Ratio:</span>
-          <span className="stat-value">
-            {soakingReport.summary.averageSoakHours}:{soakingReport.summary.averageRestHours}
-          </span>
+      {/* Summary Ratios */}
+      <div className="totals-container">
+        <div className="total-item">
+          <span className="total-label">C/M % =</span>
+          <input 
+            type="text" 
+            readOnly
+            value={entries[0]?.cm_ratio || ""}
+            className="total-input" 
+            placeholder="0.00" 
+            style={readOnlyStyle} 
+          />
         </div>
-        <div className="stat-row">
-          <span className="stat-label">Moisture Gain:</span>
-          <span className="stat-value">
-            +{(soakingReport.summary.averageMoisture - 14).toFixed(1)}%
-          </span>
+        <div className="total-item">
+          <span className="total-label">N2 =</span>
+          <input 
+            type="text" 
+            readOnly
+            value={entries[0]?.n2_ratio || ""}
+            className="total-input" 
+            placeholder="0.00" 
+            style={readOnlyStyle} 
+          />
+        </div>
+        <div className="total-item">
+          <span className="total-label">ASH =</span>
+          <input 
+            type="text" 
+            readOnly
+            value={entries[0]?.ash_ratio || ""}
+            className="total-input" 
+            placeholder="0.00" 
+            style={readOnlyStyle} 
+          />
+        </div>
+        <br />
+        <div className="total-item">
+          <span className="total-label">C:N =</span>
+          <input 
+            type="text" 
+            readOnly
+            value={entries[0]?.cn_ratio || ""}
+            className="total-input" 
+            placeholder="0.0" 
+            style={readOnlyStyle} 
+          />
         </div>
       </div>
     </div>
   );
 }
 
-SoakingReportTable.propTypes = {
-  soakingReport: PropTypes.shape({
-    totalDuration: PropTypes.number.isRequired,
-    targetDuration: PropTypes.number.isRequired,
-    straws: PropTypes.arrayOf(strawPropType).isRequired,
-    summary: PropTypes.object.isRequired
-  }).isRequired
+FormulationTable.propTypes = {
+  entries: PropTypes.array
 };
 
-SoakingReportTable.propTypes = {
-  soakingReport: PropTypes.shape({
-    totalDuration: PropTypes.number.isRequired,
-    targetDuration: PropTypes.number.isRequired,
-    straws: PropTypes.arrayOf(strawPropType).isRequired,
-    summary: PropTypes.object.isRequired
-  }).isRequired
-};
-
-function MiniChart({ data, type, color }) {
-  const maxValue = Math.max(...data);
-  const minValue = Math.min(...data);
-  const range = maxValue - minValue;
-
-  return (
-    <div className="mini-chart">
-      {data.map((value, index) => {
-        const height = range > 0 ? ((value - minValue) / range) * 60 + 20 : 50;
-        return (
-          <div
-            key={index}
-            className="chart-bar"
-            style={{
-              height: `${height}%`,
-              backgroundColor: color
-            }}
-          >
-            <span className="bar-value">{value.toFixed(1)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-MiniChart.propTypes = {
-  data: PropTypes.arrayOf(PropTypes.number).isRequired,
-  type: PropTypes.string,
-  color: PropTypes.string
-};
-
-function ProcessTimeline({ timeline }) {
-  const [expandedBunker, setExpandedBunker] = useState(null);
-  const [expandedTunnel, setExpandedTunnel] = useState(null);
-
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+function OperationTimelineTable({ operationData = {} }) {
+  const readOnlyStyle = { background: "#f0f4f8", cursor: "not-allowed" };
+  
+  const totalCellStyle = {
+    border: "1px solid",
+    fontWeight: "bold",
+    padding: "2px 3px",
+    textAlign: "center",
+    fontSize: "0.92em",
   };
 
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const totals = Object.values(operationData).reduce((acc, op) => {
+    acc.totalOperation += (op.operation_hours || 0);
+    acc.totalResting += (op.rest_hours || 0);
+    return acc;
+  }, { totalOperation: 0, totalResting: 0 });
+
+  // const getRemarks = (stageName, operation) => {
+  //   if (!operation) return "-";
+    
+  //   if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+  //     return "Not started";
+  //   } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+  //     return "Completed";
+  //   }
+  //   return "-";
+  // };
 
   return (
-    <div className="process-timeline">
-      <h3 className="section-title">
-        <TimelineIcon /> Process Timeline
-      </h3>
-
-      <div className="timeline-section">
-        <h4 className="subsection-title">
-          <StorageIcon /> Bunker Processing
-        </h4>
-
-        <div className="timeline-cards">
-          {timeline.bunkerHistory.map((bunker) => (
-            <div key={bunker.id} className="timeline-card">
-              <div 
-                className="card-header"
-                onClick={() => setExpandedBunker(expandedBunker === bunker.id ? null : bunker.id)}
-              >
-                <div className="header-info">
-                  <span className="process-location">Bunker #{bunker.bunkerNumber}</span>
-                  <span className="process-duration">{bunker.duration} hours</span>
-                </div>
-                <span className="expand-icon">
-                  {expandedBunker === bunker.id ? '▼' : '▶'}
-                </span>
-              </div>
-
-              <div className="card-body">
-                <div className="time-range">
-                  <span>Start: {formatDateTime(bunker.startTime)}</span>
-                  <span>End: {formatDateTime(bunker.endTime)}</span>
-                </div>
-
-                <div className="charts-container">
-                  <div className="chart-wrapper">
-                    <div className="chart-label">
-                      <WaterDropIcon /> Moisture Progression
-                    </div>
-                    <MiniChart 
-                      data={bunker.moisture} 
-                      type="moisture"
-                      color="#3b82f6"
+    <div className="formulation-table-container" style={{ marginTop: "30px" }}>
+      <h3 className="table-title">Operation Timeline</h3>
+      <div className="table-wrapper">
+        <table className="materials-table">
+          <thead>
+            <tr>
+              <th>S.NO</th>
+              <th>OPERATION STAGE</th>
+              <th>OPERATION TIME (hrs)</th>
+              <th>RESTING TIME (hrs)</th>
+              <th>REMARKS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {OPERATION_STAGES.map((stage) => {
+              const operation = operationData[stage.apiKey] || {
+                operation_hours: 0,
+                rest_hours: 0
+              };
+              
+              return (
+                <tr key={stage.id}>
+                  <td>{stage.id}</td>
+                  <td>{stage.name}</td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={operation.operation_hours?.toFixed(1) || "0.0"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
                     />
-                  </div>
-
-                  <div className="chart-wrapper">
-                    <div className="chart-label">
-                      <ThermostatIcon /> Temperature Progression
-                    </div>
-                    <MiniChart 
-                      data={bunker.temperature} 
-                      type="temperature"
-                      color="#ef4444"
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      value={operation.rest_hours?.toFixed(1) || "0.0"}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
                     />
-                  </div>
-                </div>
-
-                {expandedBunker === bunker.id && (
-                  <div className="expanded-details">
-                    <table className="details-table">
-                      <thead>
-                        <tr>
-                          <th>Time</th>
-                          <th>Moisture (%)</th>
-                          <th>Temperature (°C)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bunker.timestamps.map((timestamp, index) => (
-                          <tr key={index}>
-                            <td>{formatTime(timestamp)}</td>
-                            <td>{bunker.moisture[index]}%</td>
-                            <td>{bunker.temperature[index]}°C</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tunnel History Section */}
-      <div className="timeline-section">
-        <h4 className="subsection-title">
-          {/* <TunnelIcon /> */}
-          😁
-           Tunnel Processing
-        </h4>
-
-        <div className="timeline-cards">
-          {timeline.tunnelHistory.map((tunnel) => (
-            <div key={tunnel.id} className="timeline-card">
-              <div 
-                className="card-header"
-                onClick={() => setExpandedTunnel(expandedTunnel === tunnel.id ? null : tunnel.id)}
-              >
-                <div className="header-info">
-                  <span className="process-location">{tunnel.tunnelName}</span>
-                  <span className="process-duration">{tunnel.duration} hours</span>
-                </div>
-                <span className="expand-icon">
-                  {expandedTunnel === tunnel.id ? '▼' : '▶'}
-                </span>
-              </div>
-
-              <div className="card-body">
-                <div className="time-range">
-                  <span>Start: {formatDateTime(tunnel.startTime)}</span>
-                  <span>End: {formatDateTime(tunnel.endTime)}</span>
-                </div>
-
-                <div className="charts-container">
-                  <div className="chart-wrapper">
-                    <div className="chart-label">
-                      <ThermostatIcon /> Temperature Progression
-                    </div>
-                    <MiniChart 
-                      data={tunnel.temperature} 
-                      type="temperature"
-                      color="#ef4444"
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      // value={getRemarks(stage.name, operation)}
+                      readOnly 
+                      className="table-input" 
+                      placeholder="-" 
+                      style={readOnlyStyle} 
                     />
-                  </div>
-
-                  <div className="chart-wrapper">
-                    <div className="chart-label">
-                      <WaterDropIcon /> Humidity Progression
-                    </div>
-                    <MiniChart 
-                      data={tunnel.humidity} 
-                      type="humidity"
-                      color="#10b981"
-                    />
-                  </div>
-                </div>
-
-                {expandedTunnel === tunnel.id && (
-                  <div className="expanded-details">
-                    <table className="details-table">
-                      <thead>
-                        <tr>
-                          <th>Time</th>
-                          <th>Temperature (°C)</th>
-                          <th>Humidity (%)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tunnel.timestamps.map((timestamp, index) => (
-                          <tr key={index}>
-                            <td>{formatTime(timestamp)}</td>
-                            <td>{tunnel.temperature[index]}°C</td>
-                            <td>{tunnel.humidity[index]}%</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Quality Checks Timeline */}
-      <div className="quality-checks">
-        <h4 className="subsection-title">Quality Checks</h4>
-        <div className="checks-timeline">
-          {timeline.qualityChecks.map((check, index) => (
-            <div key={index} className="check-item">
-              <div className="check-dot"></div>
-              <div className="check-content">
-                <span className="check-time">{formatDateTime(check.time)}</span>
-                <span className="check-parameter">{check.parameter}</span>
-                <span className="check-value">{check.value}</span>
-                <span className={`check-status ${check.status}`}>{check.status}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="totals-row">
+              <td colSpan={2} style={{textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
+              <td style={totalCellStyle}>
+                {totals.totalOperation > 0 ? totals.totalOperation.toFixed(1) : "0.0"}
+              </td>
+              <td style={totalCellStyle}>
+                {totals.totalResting > 0 ? totals.totalResting.toFixed(1) : "0.0"}
+              </td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-ProcessTimeline.propTypes = {
-  timeline: PropTypes.shape({
-    bunkerHistory: PropTypes.array.isRequired,
-    tunnelHistory: PropTypes.array.isRequired,
-    qualityChecks: PropTypes.array.isRequired
-  }).isRequired
+OperationTimelineTable.propTypes = {
+  operationData: PropTypes.object
 };
 
-// Main Component
+function BatchSummary({ batchData }) {
+  if (!batchData) return null;
+
+  const startDateTime = batchData.start_date || batchData.start_time;
+  const plannedDateTime = batchData.planned_comp_date || batchData.planned_comp_time;
+  
+  const { date: startDate, time: startTime } = parseDateTime(startDateTime);
+  const { date: plannedDate, time: plannedTime } = parseDateTime(plannedDateTime);
+  
+  const totalHours = calculateTotalHours(startDateTime, plannedDateTime);
+
+  const formatDisplayDateTime = (dateStr, timeStr) => {
+    if (!dateStr) return 'Not set';
+    return `${dateStr} ${timeStr || ''}`;
+  };
+
+  return (
+    <div className="batch-summary-section">
+      <h2 className="section-title">Batch Summary</h2>
+      <div className="batch-info-grid">
+        <div className="form-group">
+          <label className="form-label">Batch Number</label>
+          <input 
+            type="text" 
+            value={batchData.batch_number || ''}
+            readOnly 
+            className="form-input" 
+            style={{ background: "#f0f4f8" }}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Start Date</label>
+          <input 
+            type="text" 
+            value={formatDisplayDateTime(startDate, startTime)}
+            readOnly 
+            className="form-input" 
+            style={{ background: "#f0f4f8" }}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Planned Completion</label>
+          <input 
+            type="text" 
+            value={formatDisplayDateTime(plannedDate, plannedTime)}
+            readOnly 
+            className="form-input" 
+            style={{ background: "#f0f4f8" }}
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Total Hours</label>
+          <input 
+            type="text" 
+            value={totalHours ? `${totalHours} hrs` : 'Not calculated'}
+            readOnly 
+            className="form-input" 
+            style={{ background: "#f0f4f8" }}
+          />
+        </div>
+      </div>
+
+      {batchData.remarks && (
+        <div className="comments-group">
+          <label className="form-label">Remarks</label>
+          <textarea 
+            value={batchData.remarks}
+            readOnly 
+            className="form-textarea" 
+            rows="2"
+            style={{ background: "#f0f4f8" }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+BatchSummary.propTypes = {
+  batchData: PropTypes.object
+};
+
 function BatchReportsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const reportContentRef = useRef(null);
   
   const [batchId, setBatchId] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [reportData, setReportData] = useState(null);
+  const [batchData, setBatchData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    // Check for batch ID in URL params
     const urlBatchId = searchParams.get('batchId');
+    const urlBatchName = searchParams.get('name');
+    
     if (urlBatchId) {
       setSearchInput(urlBatchId);
-      fetchReport(urlBatchId);
+      if (urlBatchName) {
+        console.log('Loading batch:', urlBatchName);
+      }
+      fetchBatchReport(urlBatchId);
     }
   }, [searchParams]);
 
-  const fetchReport = async (id) => {
+  const fetchBatchReport = async (id) => {
     if (!id) return;
 
     try {
       setLoading(true);
-      const data = await ReportsRepo.GetFullBatchReport(id);
-      setReportData(data);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      
+      const batchResponse = await fetch(`${apiUrl}/batches/${id}`);
+      let batchInfo = {};
+      
+      if (batchResponse.ok) {
+        const batchResult = await batchResponse.json();
+        batchInfo = batchResult.data || batchResult;
+      }
+      
+      const timelineResponse = await fetch(`${apiUrl}/batches/reports/${id}`);
+      let operationTimeline = {};
+      
+      if (timelineResponse.ok) {
+        const timelineResult = await timelineResponse.json();
+        if (timelineResult.status && timelineResult.data) {
+          operationTimeline = timelineResult.data;
+        }
+      }
+      
+      const combinedData = {
+        ...batchInfo,
+        operation_timeline: operationTimeline,
+        formulation_entries: batchInfo.formulation_entries || []
+      };
+      
+      setBatchData(combinedData);
       setBatchId(id);
+      
+      if (batchInfo.batch_number) {
+        setSearchInput(batchInfo.batch_number);
+      }
+      
       toast.success('Batch report loaded successfully');
     } catch (error) {
       toast.error('Failed to load batch report');
@@ -787,13 +574,20 @@ function BatchReportsContent() {
 
   const handleSearch = () => {
     if (!searchInput.trim()) {
-      toast.error('Please enter a Batch ID');
+      toast.error('Please enter a Batch ID or Number');
       return;
     }
 
-    // Update URL with batch ID
-    router.push(`/batch-reports?batchId=${searchInput}`);
-    fetchReport(searchInput);
+    const isNumeric = /^\d+$/.test(searchInput.trim());
+    
+    if (isNumeric) {
+      router.push(`/batch-reports?batchId=${searchInput}`);
+      fetchBatchReport(searchInput);
+    } else {
+      toast.info('Searching by batch number...');
+      router.push(`/batch-reports?batchId=${searchInput}`);
+      fetchBatchReport(searchInput);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -803,187 +597,360 @@ function BatchReportsContent() {
   };
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow pop-ups to print');
+      return;
+    }
+
+    const content = document.getElementById('report-content')?.innerHTML || '';
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Batch Report - ${batchData?.batch_number || batchId}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            .section-title { margin-top: 20px; margin-bottom: 10px; }
+            .batch-info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+            .form-group { display: flex; flex-direction: column; }
+            .form-label { font-weight: bold; margin-bottom: 5px; }
+            .form-input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+            .table-wrapper { overflow-x: auto; }
+            .materials-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .materials-table th { background-color: #f1f5f9; padding: 6px; }
+            .materials-table td { padding: 4px; border-bottom: 1px solid #eee; }
+            .totals-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+            .total-item { display: flex; align-items: center; gap: 10px; }
+            .total-label { font-weight: bold; }
+            .total-input { padding: 4px; border: 1px solid #ddd; border-radius: 4px; }
+            .table-input { width: 100%; padding: 2px 4px; border: 1px solid #ddd; border-radius: 2px; }
+          </style>
+        </head>
+        <body>
+          <h1>Batch Report - ${batchData?.batch_number || batchId}</h1>
+          <div>${content}</div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
+  // Export to PDF
   const handleExportPDF = () => {
-    toast.info('PDF export feature coming soon');
+    try {
+      if (!batchData) return;
+      
+      const doc = new jsPDF();
+      let yPos = 20;
+      
+      // Title
+      doc.setFontSize(16);
+      doc.text(`Batch Report - ${batchData.batch_number || batchId}`, 14, yPos);
+      yPos += 10;
+      
+      // Batch Summary
+      doc.setFontSize(14);
+      doc.text('Batch Summary', 14, yPos);
+      yPos += 7;
+      
+      doc.setFontSize(10);
+      const startDate = batchData.start_date || batchData.start_time;
+      const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
+      const totalHours = calculateTotalHours(startDate, plannedDate);
+      
+      doc.text(`Batch Number: ${batchData.batch_number || ''}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Start Date: ${startDate ? new Date(startDate).toLocaleString() : 'Not set'}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Planned Completion: ${plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'}`, 14, yPos);
+      yPos += 6;
+      doc.text(`Total Hours: ${totalHours || 'Not calculated'}`, 14, yPos);
+      yPos += 6;
+      
+      if (batchData.remarks) {
+        doc.text(`Remarks: ${batchData.remarks}`, 14, yPos);
+        yPos += 10;
+      } else {
+        yPos += 4;
+      }
+      
+      // Formulation Table
+      doc.setFontSize(14);
+      doc.text('Raw Materials Formulation', 14, yPos);
+      yPos += 5;
+      
+      const formulationColumn = ["S.No", "Material", "Fresh Wt", "Moist %", "Dry Wt", "N2 %", "Total N2", "Ash %", "Total Ash", "%"];
+      const formulationRows = [];
+      
+      ALL_MATERIALS.forEach((material) => {
+        const entry = findMatchingEntry(batchData.formulation_entries, material.name);
+        formulationRows.push([
+          material.id,
+          material.name,
+          entry?.wet_weight || '-',
+          entry?.moisture_percent || '-',
+          entry?.dry_weight || '-',
+          entry?.nitrogen_percent || '-',
+          entry?.nitrogen_total || '-',
+          entry?.ash_percent || '-',
+          entry?.ash_total || '-',
+          entry?.total_percent || '-'
+        ]);
+      });
+      
+      doc.autoTable({
+        head: [formulationColumn],
+        body: formulationRows,
+        startY: yPos + 5,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+      });
+      
+      // Operation Timeline Table
+      yPos = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(14);
+      doc.text('Operation Timeline', 14, yPos);
+      
+      const operationColumn = ["S.No", "Operation Stage", "Operation Time", "Resting Time", "Remarks"];
+      const operationRows = [];
+      
+      OPERATION_STAGES.forEach((stage) => {
+        const operation = batchData.operation_timeline?.[stage.apiKey] || {
+          operation_hours: 0,
+          rest_hours: 0
+        };
+        
+        let remarks = "-";
+        if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+          remarks = "Not started";
+        } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
+          remarks = "In progress";
+        } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+          remarks = "Completed";
+        }
+        
+        operationRows.push([
+          stage.id,
+          stage.name,
+          operation.operation_hours?.toFixed(1) || '0.0',
+          operation.rest_hours?.toFixed(1) || '0.0',
+          remarks
+        ]);
+      });
+      
+      doc.autoTable({
+        head: [operationColumn],
+        body: operationRows,
+        startY: yPos + 5,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+      });
+      
+      doc.save(`batch-report-${batchData.batch_number || batchId}.pdf`);
+      toast.success('PDF exported successfully');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export PDF');
+    }
   };
 
-  const handleShare = () => {
-    // Copy report URL to clipboard
-    const url = `${window.location.origin}/batch-reports?batchId=${batchId}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Report link copied to clipboard');
+  // Export to Excel
+  const handleExportExcel = () => {
+    try {
+      if (!batchData) return;
+      
+      const wb = XLSX.utils.book_new();
+      
+      // Batch Summary Sheet
+      const startDate = batchData.start_date || batchData.start_time;
+      const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
+      const totalHours = calculateTotalHours(startDate, plannedDate);
+      
+      const summaryData = [
+        ['Batch Summary'],
+        ['Batch Number', batchData.batch_number || ''],
+        ['Start Date', startDate ? new Date(startDate).toLocaleString() : 'Not set'],
+        ['Planned Completion', plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'],
+        ['Total Hours', totalHours || 'Not calculated'],
+        ['Remarks', batchData.remarks || '']
+      ];
+      
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+      
+      // Formulation Sheet 
+      const formulationData = [
+        ['S.No', 'Material', 'Fresh Weight', 'Moist %', 'Dry Wt', 'N2 %', 'Total N2', 'Ash %', 'Total Ash', '%'],
+        ...ALL_MATERIALS.map((material) => {
+          const entry = findMatchingEntry(batchData.formulation_entries, material.name);
+          return [
+            material.id,
+            material.name,
+            entry?.wet_weight || '-',
+            entry?.moisture_percent || '-',
+            entry?.dry_weight || '-',
+            entry?.nitrogen_percent || '-',
+            entry?.nitrogen_total || '-',
+            entry?.ash_percent || '-',
+            entry?.ash_total || '-',
+            entry?.total_percent || '-'
+          ];
+        })
+      ];
+      
+      const formulationSheet = XLSX.utils.aoa_to_sheet(formulationData);
+      XLSX.utils.book_append_sheet(wb, formulationSheet, 'Formulation');
+      
+      // Operation Timeline Sheet
+      const operationData = [
+        ['S.No', 'Operation Stage', 'Operation Time (hrs)', 'Resting Time (hrs)', 'Remarks'],
+        ...OPERATION_STAGES.map((stage) => {
+          const operation = batchData.operation_timeline?.[stage.apiKey] || {
+            operation_hours: 0,
+            rest_hours: 0
+          };
+          
+          let remarks = "-";
+          if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+            remarks = "Not started";
+          } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
+            remarks = "In progress";
+          } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+            remarks = "Completed";
+          }
+          
+          return [
+            stage.id,
+            stage.name,
+            operation.operation_hours?.toFixed(1) || '0.0',
+            operation.rest_hours?.toFixed(1) || '0.0',
+            remarks
+          ];
+        })
+      ];
+      
+      const operationSheet = XLSX.utils.aoa_to_sheet(operationData);
+      XLSX.utils.book_append_sheet(wb, operationSheet, 'Operation Timeline');
+      
+      XLSX.writeFile(wb, `batch-report-${batchData.batch_number || batchId}.xlsx`);
+      toast.success('Excel exported successfully');
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('Failed to export Excel');
+    }
   };
 
   return (
     <AppLayout title="Batch Reports">
-      <div className="reports-container">
-        {/* Header Section */}
-        <div className="header-section">
-          <div className="header-left">
-            <h1 className="page-title">Batch Reports</h1>
-          </div>
+      <div className="add-batch-card">
+        <form onSubmit={(e) => e.preventDefault()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h1 className="section-title" style={{ marginBottom: 0, borderBottom: 'none' }}>Batch Reports</h1>
 
-          <div className="search-section">
-            <div className="search-wrapper">
-              <SearchIcon className="search-icon" />
-              <input
-                type="text"
-                placeholder="Enter Batch ID (e.g., B2024-001)"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="search-input"
-                disabled={loading}
-              />
-            </div>
-            <button 
-              onClick={handleSearch}
-              className="search-btn"
-              disabled={loading || !searchInput}
-            >
-              {loading ? 'Loading...' : 'Generate Report'}
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Generating batch report...</p>
-          </div>
-        ) : reportData ? (
-          <div className="report-content">
-            {/* Batch Header with Summary */}
-            <BatchHeader 
-              batchInfo={reportData.batchInfo}
-              formulation={reportData.formulation}
-              performance={reportData.performance}
-            />
-
-            {/* Tab Navigation */}
-            <div className="tab-navigation">
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px' }}>
+                <SearchIcon style={{ margin: '0 5px', color: '#666', fontSize: '20px' }} />
+                <input
+                  type="text"
+                  placeholder="Enter Batch ID or Number"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  style={{ border: 'none', outline: 'none', padding: '8px', width: '250px' }}
+                  disabled={loading}
+                />
+              </div>
               <button 
-                className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('overview')}
+                onClick={handleSearch}
+                className="btn-primary"
+                style={{ padding: '8px 20px' }}
+                disabled={loading || !searchInput}
               >
-                Overview
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'soaking' ? 'active' : ''}`}
-                onClick={() => setActiveTab('soaking')}
-              >
-                Soaking Details
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
-                onClick={() => setActiveTab('timeline')}
-              >
-                Process Timeline
-              </button>
-              <button 
-                className={`tab-btn ${activeTab === 'quality' ? 'active' : ''}`}
-                onClick={() => setActiveTab('quality')}
-              >
-                Quality Analysis
+                {loading ? 'Loading...' : 'Generate'}
               </button>
             </div>
+          </div>
 
-            {/* Tab Content */}
-            <div className="tab-content">
-              {activeTab === 'overview' && (
-                <div className="overview-tab">
-                  <SoakingReportTable soakingReport={reportData.soakingReport} />
-                  <div className="summary-charts">
-                    <div className="chart-card">
-                      <h4>Moisture Trend</h4>
-                      <div className="trend-chart">
-                        {/* Combined moisture trend from bunker and tunnel data */}
-                        <MiniChart 
-                          data={[...reportData.processTimeline.bunkerHistory.flatMap(b => b.moisture)]}
-                          type="moisture"
-                          color="#3b82f6"
-                        />
-                      </div>
-                    </div>
-                    <div className="chart-card">
-                      <h4>Temperature Trend</h4>
-                      <div className="trend-chart">
-                        <MiniChart 
-                          data={[...reportData.processTimeline.bunkerHistory.flatMap(b => b.temperature)]}
-                          type="temperature"
-                          color="#ef4444"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'soaking' && (
-                <SoakingReportTable soakingReport={reportData.soakingReport} />
-              )}
-
-              {activeTab === 'timeline' && (
-                <ProcessTimeline timeline={reportData.processTimeline} />
-              )}
-
-              {activeTab === 'quality' && (
-                <div className="quality-tab">
-                  <div className="quality-metrics">
-                    <h4>Quality Metrics</h4>
-                    <div className="metrics-grid">
-                      <div className="metric-card">
-                        <span className="metric-label">Final Moisture</span>
-                        <span className="metric-value">{reportData.batchInfo.moisture}%</span>
-                        <span className="metric-target">Target: 45%</span>
-                      </div>
-                      <div className="metric-card">
-                        <span className="metric-label">Final Temperature</span>
-                        <span className="metric-value">{reportData.batchInfo.temperature}°C</span>
-                        <span className="metric-target">Target: 22-25°C</span>
-                      </div>
-                      <div className="metric-card">
-                        <span className="metric-label">Quality Grade</span>
-                        <span className="metric-value">{reportData.batchInfo.quality}</span>
-                      </div>
-                      <div className="metric-card">
-                        <span className="metric-label">Yield</span>
-                        <span className="metric-value">{reportData.performance.yieldPercentage}%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="quality-timeline">
-                    <h4>Quality Check History</h4>
-                    <div className="checks-list">
-                      {reportData.processTimeline.qualityChecks.map((check, index) => (
-                        <div key={index} className="check-entry">
-                          <span className="check-time">{new Date(check.time).toLocaleString()}</span>
-                          <span className="check-param">{check.parameter}</span>
-                          <span className="check-value">{check.value}</span>
-                          <span className={`check-badge ${check.status}`}>{check.status}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+          {/* Action Buttons */}
+          {batchData && (
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <button onClick={handlePrint} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <PrintIcon /> Print
+              </button>
+              {/* <button onClick={handleExportPDF} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <PictureAsPdfIcon /> PDF
+              </button> */}
+              {/* <button onClick={handleExportExcel} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <TableChartIcon /> Excel
+              </button> */}
             </div>
-          </div>
-        ) : (
-          <div className="empty-state">
-            <div className="empty-icon">📊</div>
-            <h3 className="empty-title">No Report Generated</h3>
-            <p className="empty-description">
-              Enter a Batch ID above to generate a comprehensive batch report
-            </p>
-          </div>
-        )}
+          )}
+
+          {loading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+              <p>Generating batch report...</p>
+            </div>
+          )}
+
+          {!loading && batchData ? (
+            <div id="report-content" ref={reportContentRef}>
+              <BatchSummary batchData={batchData} />
+              <FormulationTable entries={batchData.formulation_entries || []} />
+              <OperationTimelineTable operationData={batchData.operation_timeline || {}} />
+            </div>
+          ) : !loading && !batchData && (
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '20px' }}>📊</div>
+              <h3 style={{ fontSize: '18px', marginBottom: '10px' }}>No Report Generated</h3>
+              <p style={{ color: '#64748b' }}>
+                Enter a Batch ID or Number above to generate a comprehensive batch report
+              </p>
+            </div>
+          )}
+        </form>
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .loading-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.8);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        
+        .loading-spinner {
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #3498db;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin-bottom: 1rem;
+        }
+      `}</style>
     </AppLayout>
   );
 }
