@@ -25,7 +25,6 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     
-    // Pass name instead of email
     const ok = await login(name, password);
     
     setSubmitting(false);

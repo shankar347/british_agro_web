@@ -892,7 +892,6 @@
   cursor: not-allowed;
 }
 
-/* Responsive adjustments for grid */
 @media (max-width: 768px) {
   .users-grid {
     grid-template-columns: 1fr;
@@ -915,7 +914,6 @@
   }
 }
 
-/* Update existing styles */
 .filters-section {
   display: flex;
   gap: 16px;

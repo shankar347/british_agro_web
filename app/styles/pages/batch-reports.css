@@ -1,12 +1,9 @@
-/* batch-reports.css */
-
 .reports-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
 }
 
-/* Header Section */
 .header-section {
   display: flex;
   justify-content: space-between;

@@ -53,7 +53,7 @@ const createEmptyBatch = (batchNumber, materials = [], batchId = null, plainBunk
     materials: [],
     batchData: null,
     existingRecords: {},
-    plainBunkerMixed: plainBunkerMixed // Store the plain_bunker_mixed status
+    plainBunkerMixed: plainBunkerMixed 
   };
 
   materials.forEach(material => {

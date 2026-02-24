@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "../../components/AppLayout";
 import "../../styles/pages/batch-details.css";
+
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EventNoteIcon from '@mui/icons-material/EventNote';
@@ -34,7 +35,6 @@ export default function AddBatchToBunker() {
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const itemsPerPage = 10;
 
-  // Fetch batches from API
   useEffect(() => {
     const fetchBatches = async () => {
       try {
@@ -65,7 +65,6 @@ export default function AddBatchToBunker() {
     fetchBatches();
   }, []);
 
-  // Format date to display in a readable format
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -76,7 +75,6 @@ export default function AddBatchToBunker() {
     });
   };
 
-  // Format time to display in a readable format
   const formatTime = (timeString) => {
     if (!timeString) return 'N/A';
     const date = new Date(timeString);
@@ -87,7 +85,6 @@ export default function AddBatchToBunker() {
     });
   };
 
-  // Format date for grid view (more compact)
   const formatDateCompact = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -98,7 +95,6 @@ export default function AddBatchToBunker() {
     });
   };
 
-  // Pagination logic
   const totalPages = Math.ceil(batches.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -132,7 +128,7 @@ export default function AddBatchToBunker() {
     const rect = e.currentTarget.getBoundingClientRect();
     setMenuPosition({
       top: rect.bottom + window.scrollY + 5,
-      left: rect.left + window.scrollX - 150 // Adjust to position menu
+      left: rect.left + window.scrollX - 150 
     });
     setSelectedBatch(batch);
     setShowRedirectMenu(true);
@@ -143,7 +139,6 @@ export default function AddBatchToBunker() {
     
     setShowRedirectMenu(false);
     
-    // Encode batch number and pass batch ID as well
     const params = new URLSearchParams({
       batch: selectedBatch.batch_number,
       batchId: selectedBatch.id
@@ -191,7 +186,6 @@ export default function AddBatchToBunker() {
     return pageNumbers;
   };
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {
       setShowRedirectMenu(false);
@@ -214,7 +208,6 @@ export default function AddBatchToBunker() {
         </div>
       )}
 
-      {/* Redirect Menu Popup */}
 {showRedirectMenu && selectedBatch && (
   <div 
     className="redirect-menu-overlay"
@@ -281,7 +274,6 @@ export default function AddBatchToBunker() {
   </div>
 )}
 
-      {/* Recent Assignments Section with Pagination */}
       <div className="card" style={{ marginTop: "2rem" }}>
         <div className="card-header">
           <h3>Recent Batches</h3>
@@ -486,7 +478,7 @@ export default function AddBatchToBunker() {
                     disabled={currentPage === 1}
                     aria-label="Previous page"
                   >
-                    &laquo; Previous
+                    &laquo;
                   </button>
                   
                   <div className="pagination-pages">
@@ -513,7 +505,7 @@ export default function AddBatchToBunker() {
                     disabled={currentPage === totalPages}
                     aria-label="Next page"
                   >
-                    Next &raquo;
+                    &raquo;
                   </button>
                 </div>
               </div>
@@ -521,9 +513,6 @@ export default function AddBatchToBunker() {
           </>
         )}
       </div>
-
-      {/* Add CSS for the redirect menu */}
-
     </AppLayout>
   );
 }

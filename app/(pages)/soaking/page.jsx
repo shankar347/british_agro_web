@@ -197,7 +197,6 @@ const hasCompleteMaterialData = (material, includePlainBunker = false) => {
     return false;
   }
   
-  // Check main substages for completeness
   for (const substage of material.substages) {
     if (substage.startDate && !substage.startTime) {
       return false;

@@ -7,7 +7,6 @@ import { ToastProvider, useToast } from "../../components/common/Toaster";
 import "../../styles/pages/batch-reports.css";
 import PropTypes from 'prop-types';
 
-// Icons
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PrintIcon from '@mui/icons-material/Print';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -31,10 +30,8 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PersonIcon from '@mui/icons-material/Person';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
 
-// Mock API service (replace with actual API calls)
 const ReportsRepo = {
   GetFullBatchReport: async (batchId) => {
-    // Mock API response with comprehensive batch data
     return {
       batchInfo: {
         id: batchId,
@@ -384,7 +381,6 @@ BatchHeader.propTypes = {
   performance: PropTypes.object.isRequired
 };
 
-// SoakingReportTable Component (updated - removed Status column)
 function SoakingReportTable({ soakingReport }) {
   const formatTime = (dateString) => {
     if (!dateString) return '—';
@@ -501,7 +497,6 @@ SoakingReportTable.propTypes = {
   }).isRequired
 };
 
-// MiniChart Component
 function MiniChart({ data, type, color }) {
   const maxValue = Math.max(...data);
   const minValue = Math.min(...data);
@@ -534,7 +529,6 @@ MiniChart.propTypes = {
   color: PropTypes.string
 };
 
-// ProcessTimeline Component
 function ProcessTimeline({ timeline }) {
   const [expandedBunker, setExpandedBunker] = useState(null);
   const [expandedTunnel, setExpandedTunnel] = useState(null);
@@ -563,7 +557,6 @@ function ProcessTimeline({ timeline }) {
         <TimelineIcon /> Process Timeline
       </h3>
 
-      {/* Bunker History Section */}
       <div className="timeline-section">
         <h4 className="subsection-title">
           <StorageIcon /> Bunker Processing

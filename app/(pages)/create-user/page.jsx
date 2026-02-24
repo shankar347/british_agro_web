@@ -55,13 +55,11 @@ function CreateUserContent() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [operationLoading, setOperationLoading] = useState(false);
-  const [viewMode, setViewMode] = useState("list"); // 'list' or 'grid'
+  const [viewMode, setViewMode] = useState("list"); 
   
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(USERS_PER_PAGE);
 
-  // UPDATED: Only allow superadmin to access this page
   useEffect(() => { 
     if (user && user.role !== "superadmin") {
       toast.error("You don't have permission to access this page");
@@ -73,7 +71,6 @@ function CreateUserContent() {
     fetchUsers();
   }, []);
 
-  // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, roleFilter]);
@@ -154,7 +151,6 @@ function CreateUserContent() {
 
     try {
       if (editingUser) {
-        // Update existing user
         const url = `${API_URL}/users/${editingUser.id}`;
         console.log("PUT request to:", url);
         
@@ -180,7 +176,6 @@ function CreateUserContent() {
         const responseData = await response.json();
         console.log("PUT response:", responseData);
         
-        // Handle different response structures
         let updatedUser;
         if (responseData && responseData.data) {
           updatedUser = responseData.data;
@@ -198,7 +193,6 @@ function CreateUserContent() {
         );
 
       } else {
-        // Create new user
         const url = `${API_URL}/users`;
         console.log("POST request to:", url);
         
@@ -224,7 +218,6 @@ function CreateUserContent() {
         const responseData = await response.json();
         console.log("POST response:", responseData);
         
-        // Handle different response structures
         let newUser;
         if (responseData && responseData.data) {
           newUser = responseData.data;
@@ -242,12 +235,10 @@ function CreateUserContent() {
         );
       }
 
-      // Reset form
       setForm({ name: "", role: "operator", password: "", confirmPassword: "" });
       setEditingUser(null);
       setShowForm(false);
       
-      // Refresh user list
       fetchUsers(true);
 
     } catch (error) {
@@ -298,7 +289,6 @@ function CreateUserContent() {
       setUsers((prev) => prev.filter((u) => u.id !== id));
       setDeleteId(null);
       
-      // Adjust current page if needed
       const totalPages = Math.ceil((filteredUsers.length - 1) / itemsPerPage);
       if (currentPage > totalPages) {
         setCurrentPage(Math.max(1, totalPages));
@@ -338,32 +328,27 @@ function CreateUserContent() {
     return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
   };
 
-  // Filter users
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || false;
     const matchesRole = roleFilter === "all" || u.role?.toLowerCase() === roleFilter.toLowerCase();
     return matchesSearch && matchesRole;
   });
 
-  // Pagination logic
   const totalItems = filteredUsers.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
-  // Pagination handlers
   const goToFirstPage = () => setCurrentPage(1);
   const goToLastPage = () => setCurrentPage(totalPages);
   const goToPreviousPage = () => setCurrentPage(prev => Math.max(1, prev - 1));
   const goToNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1));
 
-  // UPDATED: Check user permissions - only superadmin can access
   if (user?.role !== "superadmin") {
     return null;
   }
 
-  // Render user in list view
   const renderListView = () => (
     <table className="users-table">
       <thead>
@@ -418,7 +403,6 @@ function CreateUserContent() {
     </table>
   );
 
-  // Render user in grid view
   const renderGridView = () => (
     <div className="users-grid">
       {currentUsers.map((u) => (
@@ -464,7 +448,6 @@ function CreateUserContent() {
     <AppLayout>
       <div className="users-container">
 
-        {/* Header Section */}
         <div className="users-header-section">
           <div>
             <h1 className="users-main-title">User Management</h1>
@@ -482,7 +465,6 @@ function CreateUserContent() {
           </div>
         </div>
 
-        {/* Create/Edit User Form */}
         {showForm && (
           <div className="create-user-card">
             <div className="card-header">
@@ -596,7 +578,6 @@ function CreateUserContent() {
           </div>
         )}
 
-        {/* Filters and View Toggle Section */}
         <div className="filters-section">
           <div className="search-wrapper">
             <Search size={18} className="search-icon" />
@@ -642,7 +623,6 @@ function CreateUserContent() {
           </div>
         </div>
 
-        {/* Users Display */}
         <div className={`users-${viewMode}-card`}>
           <div className="table-header">
             <span className="users-count">
@@ -668,7 +648,6 @@ function CreateUserContent() {
             )}
           </div>
 
-          {/* Pagination Controls */}
           {!loading && filteredUsers.length > 0 && (
             <div className="pagination-container">
               <div className="pagination-info">
@@ -692,7 +671,6 @@ function CreateUserContent() {
                   <ChevronLeft size={18} />
                 </button>
                 
-                {/* Page Numbers */}
                 <div className="pagination-pages">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -742,7 +720,6 @@ function CreateUserContent() {
 
       </div>
 
-      {/* Delete Confirmation Modal */}
       {deleteId !== null && (
         <div className="modal-overlay" onClick={() => !operationLoading && setDeleteId(null)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>

@@ -19,7 +19,6 @@ const MATERIAL_CATEGORY = {
   "SS PHOSPHATE": "additive",
 };
 
-// Initial materials state
 const INITIAL_MATERIALS = [
   { id: 1,  name: "PADDY STRAW",        freshWeight: "", moist: "", dryWt: "", n2Percent: "", totalN2: "", totalshPercent: "", totalAsh: "", rowPercent: "" },
   { id: 2,  name: "WHEAT STRAW",        freshWeight: "", moist: "", dryWt: "", n2Percent: "", totalN2: "", totalshPercent: "", totalAsh: "", rowPercent: "" },
@@ -34,7 +33,6 @@ const INITIAL_MATERIALS = [
   { id: 11, name: "SS PHOSPHATE",       freshWeight: "", moist: "", dryWt: "", n2Percent: "", totalN2: "", totalshPercent: "", totalAsh: "", rowPercent: "" },
 ];
 
-// Material name mapping from API to internal names
 const MATERIAL_NAME_MAPPING = {
   "Straw": ["PADDY STRAW", "WHEAT STRAW", "BAGASSE"],
   "Chicken Manure": ["O/P - C/M -1 TENI", "O/P C/M-2"],
@@ -46,11 +44,10 @@ const MATERIAL_NAME_MAPPING = {
   "SS Phosphate": ["SS PHOSPHATE"]
 };
 
-// Reverse mapping for quick lookup
 const getInternalMaterialName = (apiName) => {
   for (const [apiKey, internalNames] of Object.entries(MATERIAL_NAME_MAPPING)) {
     if (apiName.toLowerCase().includes(apiKey.toLowerCase())) {
-      return internalNames[0]; // Return the first matching internal name
+     return internalNames[0]; 
     }
   }
   return null;
@@ -75,11 +72,11 @@ function calcWetWeight(dryWt, moist) {
   return Math.round(dw / (1 - m / 100));
 }
 
-function calcTotalN2(dryWt, n2Percent) {
+function calcTotalN2(dryWt, n2Value) {
   const dw = parseFloat(dryWt);
-  const n = parseFloat(n2Percent);
+  const n = parseFloat(n2Value);
   if (isNaN(dw) || isNaN(n)) return "";
-  return parseFloat((dw * n / 100).toFixed(2));
+  return parseFloat((dw * n).toFixed(2)); 
 }
 
 function calcTotalAsh(dryWt, ashPercent) {
@@ -135,10 +132,10 @@ function calcBatchAggregates(materials) {
   });
 
   const sumTotalAshMass = parseFloat(sumRawAshMass.toFixed(2));
-  const totalN2Percent  = totalBatchDW ? (sumTotalN2Index / totalBatchDW) * 100 : 0;
-  const totalAshPercent = totalBatchDW ? (sumRawAshMass / totalBatchDW) * 100 : 0;
-  const cnRatio   = totalN2Percent ? ((100 - totalAshPercent) / 2) / (totalN2Percent / 100) : 0;
-  const cmPercent = totalStrawDW   ? (totalManureDW / totalStrawDW) * 100 : 0;
+  const totalN2Percent  = totalBatchDW > 0 ? (sumTotalN2Index / totalBatchDW) : 0;
+  const totalAshPercent = totalBatchDW > 0 ? (sumRawAshMass / totalBatchDW) * 100 : 0;
+  const cnRatio = totalN2Percent > 0 ? ((100 - totalAshPercent) / 2) / totalN2Percent : 0;
+  const cmPercent = totalStrawDW > 0 ? (totalManureDW / totalStrawDW) * 100 : 0;
 
   return {
     totalBatchDW: parseFloat(totalBatchDW.toFixed(2)),
@@ -170,7 +167,7 @@ function NumberInput({ value, onChange, placeholder = "-", className, min, max, 
       onWheel={handleWheel}
       className={className}
       placeholder={placeholder}
-      step={step}
+      step="any"
       min={min}
       max={max}
       disabled={disabled}
@@ -201,7 +198,6 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
 
   const agg = calcBatchAggregates(materials);
 
-  // Fetch batch details for editing
   useEffect(() => {
     if (editBatchId) {
       setIsEditMode(true);
@@ -221,13 +217,8 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
       
       const result = await response.json();
       
-      // Handle response format
       const batchData = result.data || result;
       
-      // Log for debugging
-      console.log("Batch data received:", batchData);
-      
-      // Populate form with batch data
       populateFormWithBatchData(batchData);
       
       toast.success("Batch details loaded for editing");
@@ -241,7 +232,6 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
   };
 
   const populateFormWithBatchData = (batchData) => {
-    // Extract date and time from datetime strings
     const extractDateAndTime = (dateTimeStr) => {
       if (!dateTimeStr) return { date: '', time: '' };
       try {
@@ -258,23 +248,19 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
     const startDateTime = extractDateAndTime(batchData.start_date || batchData.start_time);
     const plannedDateTime = extractDateAndTime(batchData.planned_comp_date || batchData.planned_comp_time);
 
-    // Set batch info
     setBatchInfo({
       batchNumber: batchData.batch_number || "",
       startDate: startDateTime.date,
       startTime: startDateTime.time,
     });
 
-    // Set completion info
     setCompletion({
       plannedDate: plannedDateTime.date,
       plannedTime: plannedDateTime.time,
     });
 
-    // Set comments
     setPlanComments(batchData.remarks || "");
 
-    // Reset materials to empty first
     setMaterials(prevMaterials => 
       prevMaterials.map(mat => ({
         ...mat,
@@ -289,33 +275,24 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
       }))
     );
 
-    // Set materials if formulation_entries exists
     if (batchData.formulation_entries && batchData.formulation_entries.length > 0) {
-      console.log("Formulation entries:", batchData.formulation_entries);
-      
-      // Create a map of API material names to their data
       const apiEntriesMap = {};
       batchData.formulation_entries.forEach(entry => {
         apiEntriesMap[entry.name] = entry;
       });
 
-      // Update materials with the fetched data using the mapping
       setTimeout(() => {
         setMaterials(prevMaterials => 
           prevMaterials.map(mat => {
-            // Find which API entry matches this material
             let matchingEntry = null;
             
-            // Check each API entry
             for (const [apiName, entryData] of Object.entries(apiEntriesMap)) {
-              // Check if this API name should map to current material
               const possibleMappings = MATERIAL_NAME_MAPPING[apiName] || [];
               if (possibleMappings.includes(mat.name)) {
                 matchingEntry = entryData;
                 break;
               }
               
-              // Also try case-insensitive partial match
               if (mat.name.toLowerCase().includes(apiName.toLowerCase()) || 
                   apiName.toLowerCase().includes(mat.name.toLowerCase())) {
                 matchingEntry = entryData;
@@ -324,7 +301,6 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
             }
 
             if (matchingEntry) {
-              console.log(`Matching ${mat.name} with entry:`, matchingEntry);
               return {
                 ...mat,
                 freshWeight: matchingEntry.wet_weight?.toString() || "",
@@ -489,8 +465,6 @@ function AddNewBatchContent({ apiEndpoint = '/batches' }) {
         : `${apiUrl}${apiEndpoint}`;
       
       const batchData = prepareBatchData();
-      
-      console.log(`${isEditMode ? 'Updating' : 'Sending'} payload:`, batchData);
       
       const response = await fetch(endpoint, {
         method: method,

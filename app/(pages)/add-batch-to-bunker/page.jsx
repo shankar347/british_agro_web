@@ -7,15 +7,15 @@ import "../../styles/pages/add-batch-to-bunker.css";
 
 const EMPTY = { 
   batchId: "", 
-  bunkerBatchNumber: "",  // Bunker Batch Number
-  platformBatchNumber: "", // Platform Batch Number
-  bunkerNumber: "",        // Bunker Number
-  loadDate: "",           // Load Date
-  loadTime: "",           // Load Time
-  loadingMoisture: "",    // Loading Moisture
-  loadingTemp: "",        // Loading Temperature
-  plannedCompletionDate: "", // Planned Bunker Completion Date
-  plannedCompletionTime: "", // Planned Bunker Completion Time
+  bunkerBatchNumber: "",  
+  platformBatchNumber: "", 
+  bunkerNumber: "",        
+  loadDate: "",           
+  loadTime: "",           
+  loadingMoisture: "",   
+  loadingTemp: "",      
+  plannedCompletionDate: "", 
+  plannedCompletionTime: "", 
   notes: "" 
 };
 
@@ -79,14 +79,11 @@ function AddBatchToBunkerContent() {
     }
     
     try {
-      // Here you would typically save to your backend
       console.log('Saving form data:', form);
       
       toast.success('Batch assigned to bunker successfully!');
-      setForm(EMPTY); // Reset form after successful submission
+      setForm(EMPTY); 
       
-      // Optional: Redirect after success
-      // setTimeout(() => router.push("/dashboard"), 2000);
     } catch (error) {
       toast.error('Failed to assign batch. Please try again.');
       console.error('Assignment error:', error);

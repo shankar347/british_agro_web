@@ -1,4 +1,3 @@
-/* Grid Layout */
 .batch-details-grid { 
   display: grid; 
   gap: 20px; 
@@ -825,7 +824,6 @@
   transform: translateY(0);
 }
 
-/* Animation Keyframes */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -846,7 +844,6 @@
   }
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
   .redirect-menu-card {
     width: 90%;
