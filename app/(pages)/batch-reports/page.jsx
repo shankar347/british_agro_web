@@ -5,9 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "../../components/AppLayout";
 import { ToastProvider, useToast } from "../../components/common/Toaster";
 import "../../styles/pages/batch-reports.css";
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import PropTypes from 'prop-types';
 
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -26,8 +23,6 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PersonIcon from '@mui/icons-material/Person';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import TableChartIcon from '@mui/icons-material/TableChart';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -70,13 +65,13 @@ function parseDateTime(dateTimeStr) {
   try {
     const date = new Date(dateTimeStr);
     if (isNaN(date.getTime())) return { date: '', time: '' };
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    
+
     return {
       date: `${year}-${month}-${day}`,
       time: `${hours}:${minutes}`
@@ -93,7 +88,7 @@ function calculateTotalHours(startDateTime, endDateTime) {
     const start = new Date(startDateTime);
     const end = new Date(endDateTime);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
-    
+
     const diffHours = (end - start) / (1000 * 60 * 60);
     return diffHours.toFixed(1);
   } catch (error) {
@@ -104,14 +99,14 @@ function calculateTotalHours(startDateTime, endDateTime) {
 
 function findMatchingEntry(entries, materialName) {
   if (!entries || !Array.isArray(entries)) return null;
-  return entries.find(entry => 
+  return entries.find(entry =>
     entry.name && entry.name.toUpperCase() === materialName
   );
 }
 
 function FormulationTable({ entries = [] }) {
   const readOnlyStyle = { background: "#f0f4f8", cursor: "not-allowed" };
-  
+
   const totalCellStyle = {
     border: "1px solid",
     fontWeight: "bold",
@@ -149,96 +144,96 @@ function FormulationTable({ entries = [] }) {
           <tbody>
             {ALL_MATERIALS.map((material) => {
               const entry = findMatchingEntry(entries, material.name);
-              
+
               return (
                 <tr key={material.id}>
                   <td>{material.id}</td>
                   <td>{material.name}</td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.wet_weight ? formatWithCommas(entry.wet_weight) : "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.moisture_percent || "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.dry_weight ? formatWithCommas(entry.dry_weight) : "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.nitrogen_percent || "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.nitrogen_total ? formatWithCommas(entry.nitrogen_total) : "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.ash_percent || "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.ash_total ? formatWithCommas(entry.ash_total) : "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={entry?.total_percent || "-"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                 </tr>
               );
             })}
             <tr className="totals-row">
-              <td colSpan={4} style={{textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
+              <td colSpan={4} style={{ textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
               <td style={totalCellStyle}>
                 {totals.totalDryWt > 0 ? formatWithCommas(totals.totalDryWt) : ""}
               </td>
@@ -260,47 +255,47 @@ function FormulationTable({ entries = [] }) {
       <div className="totals-container">
         <div className="total-item">
           <span className="total-label">C/M % =</span>
-          <input 
-            type="text" 
+          <input
+            type="text"
             readOnly
             value={entries[0]?.cm_ratio || ""}
-            className="total-input" 
-            placeholder="0.00" 
-            style={readOnlyStyle} 
+            className="total-input"
+            placeholder="0.00"
+            style={readOnlyStyle}
           />
         </div>
         <div className="total-item">
           <span className="total-label">N2 =</span>
-          <input 
-            type="text" 
+          <input
+            type="text"
             readOnly
             value={entries[0]?.n2_ratio || ""}
-            className="total-input" 
-            placeholder="0.00" 
-            style={readOnlyStyle} 
+            className="total-input"
+            placeholder="0.00"
+            style={readOnlyStyle}
           />
         </div>
         <div className="total-item">
           <span className="total-label">ASH =</span>
-          <input 
-            type="text" 
+          <input
+            type="text"
             readOnly
             value={entries[0]?.ash_ratio || ""}
-            className="total-input" 
-            placeholder="0.00" 
-            style={readOnlyStyle} 
+            className="total-input"
+            placeholder="0.00"
+            style={readOnlyStyle}
           />
         </div>
         <br />
         <div className="total-item">
           <span className="total-label">C:N =</span>
-          <input 
-            type="text" 
+          <input
+            type="text"
             readOnly
             value={entries[0]?.cn_ratio || ""}
-            className="total-input" 
-            placeholder="0.0" 
-            style={readOnlyStyle} 
+            className="total-input"
+            placeholder="0.0"
+            style={readOnlyStyle}
           />
         </div>
       </div>
@@ -314,7 +309,7 @@ FormulationTable.propTypes = {
 
 function OperationTimelineTable({ operationData = {} }) {
   const readOnlyStyle = { background: "#f0f4f8", cursor: "not-allowed" };
-  
+
   const totalCellStyle = {
     border: "1px solid",
     fontWeight: "bold",
@@ -328,17 +323,6 @@ function OperationTimelineTable({ operationData = {} }) {
     acc.totalResting += (op.rest_hours || 0);
     return acc;
   }, { totalOperation: 0, totalResting: 0 });
-
-  // const getRemarks = (stageName, operation) => {
-  //   if (!operation) return "-";
-    
-  //   if (operation.operation_hours === 0 && operation.rest_hours === 0) {
-  //     return "Not started";
-  //   } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
-  //     return "Completed";
-  //   }
-  //   return "-";
-  // };
 
   return (
     <div className="formulation-table-container" style={{ marginTop: "30px" }}>
@@ -360,46 +344,55 @@ function OperationTimelineTable({ operationData = {} }) {
                 operation_hours: 0,
                 rest_hours: 0
               };
-              
+
+              let remarks = "-";
+              if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+                remarks = "Not started";
+              } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
+                remarks = "In progress";
+              } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+                remarks = "Completed";
+              }
+
               return (
                 <tr key={stage.id}>
                   <td>{stage.id}</td>
                   <td>{stage.name}</td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={operation.operation_hours?.toFixed(1) || "0.0"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={operation.rest_hours?.toFixed(1) || "0.0"}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                   <td>
-                    <input 
-                      type="text" 
-                      // value={getRemarks(stage.name, operation)}
-                      readOnly 
-                      className="table-input" 
-                      placeholder="-" 
-                      style={readOnlyStyle} 
+                    <input
+                      type="text"
+                      value={remarks}
+                      readOnly
+                      className="table-input"
+                      placeholder="-"
+                      style={readOnlyStyle}
                     />
                   </td>
                 </tr>
               );
             })}
             <tr className="totals-row">
-              <td colSpan={2} style={{textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
+              <td colSpan={2} style={{ textAlign: "center", fontWeight: "bolder", color: "black" }}>TOTAL</td>
               <td style={totalCellStyle}>
                 {totals.totalOperation > 0 ? totals.totalOperation.toFixed(1) : "0.0"}
               </td>
@@ -424,10 +417,10 @@ function BatchSummary({ batchData }) {
 
   const startDateTime = batchData.start_date || batchData.start_time;
   const plannedDateTime = batchData.planned_comp_date || batchData.planned_comp_time;
-  
+
   const { date: startDate, time: startTime } = parseDateTime(startDateTime);
   const { date: plannedDate, time: plannedTime } = parseDateTime(plannedDateTime);
-  
+
   const totalHours = calculateTotalHours(startDateTime, plannedDateTime);
 
   const formatDisplayDateTime = (dateStr, timeStr) => {
@@ -441,41 +434,41 @@ function BatchSummary({ batchData }) {
       <div className="batch-info-grid">
         <div className="form-group">
           <label className="form-label">Batch Number</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={batchData.batch_number || ''}
-            readOnly 
-            className="form-input" 
+            readOnly
+            className="form-input"
             style={{ background: "#f0f4f8" }}
           />
         </div>
         <div className="form-group">
           <label className="form-label">Start Date</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={formatDisplayDateTime(startDate, startTime)}
-            readOnly 
-            className="form-input" 
+            readOnly
+            className="form-input"
             style={{ background: "#f0f4f8" }}
           />
         </div>
         <div className="form-group">
           <label className="form-label">Planned Completion</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={formatDisplayDateTime(plannedDate, plannedTime)}
-            readOnly 
-            className="form-input" 
+            readOnly
+            className="form-input"
             style={{ background: "#f0f4f8" }}
           />
         </div>
         <div className="form-group">
           <label className="form-label">Total Hours</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={totalHours ? `${totalHours} hrs` : 'Not calculated'}
-            readOnly 
-            className="form-input" 
+            readOnly
+            className="form-input"
             style={{ background: "#f0f4f8" }}
           />
         </div>
@@ -484,10 +477,10 @@ function BatchSummary({ batchData }) {
       {batchData.remarks && (
         <div className="comments-group">
           <label className="form-label">Remarks</label>
-          <textarea 
+          <textarea
             value={batchData.remarks}
-            readOnly 
-            className="form-textarea" 
+            readOnly
+            className="form-textarea"
             rows="2"
             style={{ background: "#f0f4f8" }}
           />
@@ -506,7 +499,7 @@ function BatchReportsContent() {
   const searchParams = useSearchParams();
   const toast = useToast();
   const reportContentRef = useRef(null);
-  
+
   const [batchId, setBatchId] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [batchData, setBatchData] = useState(null);
@@ -515,7 +508,7 @@ function BatchReportsContent() {
   useEffect(() => {
     const urlBatchId = searchParams.get('batchId');
     const urlBatchName = searchParams.get('name');
-    
+
     if (urlBatchId) {
       setSearchInput(urlBatchId);
       if (urlBatchName) {
@@ -531,38 +524,38 @@ function BatchReportsContent() {
     try {
       setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      
+
       const batchResponse = await fetch(`${apiUrl}/batches/${id}`);
       let batchInfo = {};
-      
+
       if (batchResponse.ok) {
         const batchResult = await batchResponse.json();
         batchInfo = batchResult.data || batchResult;
       }
-      
+
       const timelineResponse = await fetch(`${apiUrl}/batches/reports/${id}`);
       let operationTimeline = {};
-      
+
       if (timelineResponse.ok) {
         const timelineResult = await timelineResponse.json();
         if (timelineResult.status && timelineResult.data) {
           operationTimeline = timelineResult.data;
         }
       }
-      
+
       const combinedData = {
         ...batchInfo,
         operation_timeline: operationTimeline,
         formulation_entries: batchInfo.formulation_entries || []
       };
-      
+
       setBatchData(combinedData);
       setBatchId(id);
-      
+
       if (batchInfo.batch_number) {
         setSearchInput(batchInfo.batch_number);
       }
-      
+
       toast.success('Batch report loaded successfully');
     } catch (error) {
       toast.error('Failed to load batch report');
@@ -579,7 +572,7 @@ function BatchReportsContent() {
     }
 
     const isNumeric = /^\d+$/.test(searchInput.trim());
-    
+
     if (isNumeric) {
       router.push(`/batch-reports?batchId=${searchInput}`);
       fetchBatchReport(searchInput);
@@ -604,7 +597,7 @@ function BatchReportsContent() {
     }
 
     const content = document.getElementById('report-content')?.innerHTML || '';
-    
+
     printWindow.document.write(`
       <html>
         <head>
@@ -636,218 +629,11 @@ function BatchReportsContent() {
         </body>
       </html>
     `);
-    
+
     printWindow.document.close();
     setTimeout(() => {
       printWindow.print();
     }, 500);
-  };
-
-  // Export to PDF
-  const handleExportPDF = () => {
-    try {
-      if (!batchData) return;
-      
-      const doc = new jsPDF();
-      let yPos = 20;
-      
-      // Title
-      doc.setFontSize(16);
-      doc.text(`Batch Report - ${batchData.batch_number || batchId}`, 14, yPos);
-      yPos += 10;
-      
-      // Batch Summary
-      doc.setFontSize(14);
-      doc.text('Batch Summary', 14, yPos);
-      yPos += 7;
-      
-      doc.setFontSize(10);
-      const startDate = batchData.start_date || batchData.start_time;
-      const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
-      const totalHours = calculateTotalHours(startDate, plannedDate);
-      
-      doc.text(`Batch Number: ${batchData.batch_number || ''}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Start Date: ${startDate ? new Date(startDate).toLocaleString() : 'Not set'}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Planned Completion: ${plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Total Hours: ${totalHours || 'Not calculated'}`, 14, yPos);
-      yPos += 6;
-      
-      if (batchData.remarks) {
-        doc.text(`Remarks: ${batchData.remarks}`, 14, yPos);
-        yPos += 10;
-      } else {
-        yPos += 4;
-      }
-      
-      // Formulation Table
-      doc.setFontSize(14);
-      doc.text('Raw Materials Formulation', 14, yPos);
-      yPos += 5;
-      
-      const formulationColumn = ["S.No", "Material", "Fresh Wt", "Moist %", "Dry Wt", "N2 %", "Total N2", "Ash %", "Total Ash", "%"];
-      const formulationRows = [];
-      
-      ALL_MATERIALS.forEach((material) => {
-        const entry = findMatchingEntry(batchData.formulation_entries, material.name);
-        formulationRows.push([
-          material.id,
-          material.name,
-          entry?.wet_weight || '-',
-          entry?.moisture_percent || '-',
-          entry?.dry_weight || '-',
-          entry?.nitrogen_percent || '-',
-          entry?.nitrogen_total || '-',
-          entry?.ash_percent || '-',
-          entry?.ash_total || '-',
-          entry?.total_percent || '-'
-        ]);
-      });
-      
-      doc.autoTable({
-        head: [formulationColumn],
-        body: formulationRows,
-        startY: yPos + 5,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 }
-      });
-      
-      // Operation Timeline Table
-      yPos = doc.lastAutoTable.finalY + 10;
-      doc.setFontSize(14);
-      doc.text('Operation Timeline', 14, yPos);
-      
-      const operationColumn = ["S.No", "Operation Stage", "Operation Time", "Resting Time", "Remarks"];
-      const operationRows = [];
-      
-      OPERATION_STAGES.forEach((stage) => {
-        const operation = batchData.operation_timeline?.[stage.apiKey] || {
-          operation_hours: 0,
-          rest_hours: 0
-        };
-        
-        let remarks = "-";
-        if (operation.operation_hours === 0 && operation.rest_hours === 0) {
-          remarks = "Not started";
-        } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
-          remarks = "In progress";
-        } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
-          remarks = "Completed";
-        }
-        
-        operationRows.push([
-          stage.id,
-          stage.name,
-          operation.operation_hours?.toFixed(1) || '0.0',
-          operation.rest_hours?.toFixed(1) || '0.0',
-          remarks
-        ]);
-      });
-      
-      doc.autoTable({
-        head: [operationColumn],
-        body: operationRows,
-        startY: yPos + 5,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 }
-      });
-      
-      doc.save(`batch-report-${batchData.batch_number || batchId}.pdf`);
-      toast.success('PDF exported successfully');
-    } catch (error) {
-      console.error('PDF export error:', error);
-      toast.error('Failed to export PDF');
-    }
-  };
-
-  // Export to Excel
-  const handleExportExcel = () => {
-    try {
-      if (!batchData) return;
-      
-      const wb = XLSX.utils.book_new();
-      
-      // Batch Summary Sheet
-      const startDate = batchData.start_date || batchData.start_time;
-      const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
-      const totalHours = calculateTotalHours(startDate, plannedDate);
-      
-      const summaryData = [
-        ['Batch Summary'],
-        ['Batch Number', batchData.batch_number || ''],
-        ['Start Date', startDate ? new Date(startDate).toLocaleString() : 'Not set'],
-        ['Planned Completion', plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'],
-        ['Total Hours', totalHours || 'Not calculated'],
-        ['Remarks', batchData.remarks || '']
-      ];
-      
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
-      
-      // Formulation Sheet 
-      const formulationData = [
-        ['S.No', 'Material', 'Fresh Weight', 'Moist %', 'Dry Wt', 'N2 %', 'Total N2', 'Ash %', 'Total Ash', '%'],
-        ...ALL_MATERIALS.map((material) => {
-          const entry = findMatchingEntry(batchData.formulation_entries, material.name);
-          return [
-            material.id,
-            material.name,
-            entry?.wet_weight || '-',
-            entry?.moisture_percent || '-',
-            entry?.dry_weight || '-',
-            entry?.nitrogen_percent || '-',
-            entry?.nitrogen_total || '-',
-            entry?.ash_percent || '-',
-            entry?.ash_total || '-',
-            entry?.total_percent || '-'
-          ];
-        })
-      ];
-      
-      const formulationSheet = XLSX.utils.aoa_to_sheet(formulationData);
-      XLSX.utils.book_append_sheet(wb, formulationSheet, 'Formulation');
-      
-      // Operation Timeline Sheet
-      const operationData = [
-        ['S.No', 'Operation Stage', 'Operation Time (hrs)', 'Resting Time (hrs)', 'Remarks'],
-        ...OPERATION_STAGES.map((stage) => {
-          const operation = batchData.operation_timeline?.[stage.apiKey] || {
-            operation_hours: 0,
-            rest_hours: 0
-          };
-          
-          let remarks = "-";
-          if (operation.operation_hours === 0 && operation.rest_hours === 0) {
-            remarks = "Not started";
-          } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
-            remarks = "In progress";
-          } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
-            remarks = "Completed";
-          }
-          
-          return [
-            stage.id,
-            stage.name,
-            operation.operation_hours?.toFixed(1) || '0.0',
-            operation.rest_hours?.toFixed(1) || '0.0',
-            remarks
-          ];
-        })
-      ];
-      
-      const operationSheet = XLSX.utils.aoa_to_sheet(operationData);
-      XLSX.utils.book_append_sheet(wb, operationSheet, 'Operation Timeline');
-      
-      XLSX.writeFile(wb, `batch-report-${batchData.batch_number || batchId}.xlsx`);
-      toast.success('Excel exported successfully');
-    } catch (error) {
-      console.error('Excel export error:', error);
-      toast.error('Failed to export Excel');
-    }
   };
 
   return (
@@ -870,7 +656,7 @@ function BatchReportsContent() {
                   disabled={loading}
                 />
               </div>
-              <button 
+              <button
                 onClick={handleSearch}
                 className="btn-primary"
                 style={{ padding: '8px 20px' }}
@@ -881,18 +667,12 @@ function BatchReportsContent() {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - Only Print remains */}
           {batchData && (
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <button onClick={handlePrint} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <PrintIcon /> Print
               </button>
-              {/* <button onClick={handleExportPDF} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <PictureAsPdfIcon /> PDF
-              </button> */}
-              {/* <button onClick={handleExportExcel} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <TableChartIcon /> Excel
-              </button> */}
             </div>
           )}
 
