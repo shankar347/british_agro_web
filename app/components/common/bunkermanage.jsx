@@ -1002,6 +1002,7 @@ export default function BunkerManagementContent() {
                     batch={currentBatch}
                     onUpdate={handleUpdateBatch}
                     readOnly={false}
+
                 />
             </div>
         </AppLayout>
