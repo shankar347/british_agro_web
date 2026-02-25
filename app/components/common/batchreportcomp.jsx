@@ -128,12 +128,12 @@ function StageStatus({ batchData }) {
         return (
             <div className="stage-status-section">
                 <h3 className="section-title" style={{ fontSize: '1.1rem', marginBottom: '15px' }}>
-                    <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                    {/* <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} /> */}
                     Batch Progress Status
                 </h3>
                 <div className="status-card completed">
                     <div className="status-header">
-                        <CheckCircleIcon style={{ color: '#10b981', fontSize: '24px' }} />
+                        {/* <CheckCircleIcon style={{ color: '#10b981', fontSize: '24px' }} /> */}
                         <span className="status-badge completed">Completed</span>
                     </div>
                     <p className="status-message">This batch has been completed successfully</p>
@@ -160,7 +160,7 @@ function StageStatus({ batchData }) {
                 {/* Current Stage */}
                 <div className="status-card current">
                     <div className="status-header">
-                        <TimerIcon style={{ color: '#3b82f6', fontSize: '24px' }} />
+                        {/* <TimerIcon style={{ color: '#3b82f6', fontSize: '24px' }} /> */}
                         <span className="status-badge in-progress">In Progress</span>
                     </div>
                     <div className="stage-info">
@@ -174,7 +174,7 @@ function StageStatus({ batchData }) {
                     <div className="stage-navigation">
                         {previousStage && (
                             <div className="stage-card previous">
-                                <ArrowBackIcon className="nav-icon" />
+                                {/* <ArrowBackIcon className="nav-icon" /> */}
                                 <div className="stage-details">
                                     <span className="stage-label">Previous Stage</span>
                                     <span className="stage-name">{previousStage.name}</span>
@@ -188,7 +188,7 @@ function StageStatus({ batchData }) {
                                     <span className="stage-label">Next Stage</span>
                                     <span className="stage-name">{nextStage.name}</span>
                                 </div>
-                                <ArrowForwardIcon className="nav-icon" />
+                                {/* <ArrowForwardIcon className="nav-icon" /> */}
                             </div>
                         )}
                     </div>
