@@ -843,11 +843,3 @@ export default function AddNewBatchContent({ apiEndpoint = '/batches' }) {
         </AppLayout>
     );
 }
-
-export default function AddNewBatch() {
-    return (
-        <ToastProvider>
-            <AddNewBatchContent />
-        </ToastProvider>
-    );
-}
