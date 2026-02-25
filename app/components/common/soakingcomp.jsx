@@ -1381,7 +1381,7 @@ export default function SoakingContent() {
                     </div>
                     <div className="header-actions">
                         <div className="move-to-plain-bunker-dropdown">
-                            <label htmlFor="plainBunkerSelect">Move to Plain Bunker:</label>
+                            <label htmlFor="plainBunkerSelect">Mix Two Materials:</label>
                             <select
                                 id="plainBunkerSelect"
                                 value={currentBatch.moveToPlainBunker === true ? 'yes' : currentBatch.moveToPlainBunker === false ? 'no' : ''}
