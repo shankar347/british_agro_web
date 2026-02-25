@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import '../../styles/components/common/Toaster.css';
 
@@ -9,13 +11,13 @@ export const ToastProvider = ({ children }) => {
   const addToast = useCallback(({ type = 'info', message, duration = 5000 }) => {
     const id = Date.now() + Math.random().toString(36);
     setToasts((prevToasts) => [...prevToasts, { id, type, message, duration }]);
-    
+
     if (duration !== Infinity) {
       setTimeout(() => {
         removeToast(id);
       }, duration);
     }
-    
+
     return id;
   }, []);
 
@@ -64,16 +66,16 @@ export const ToastProvider = ({ children }) => {
 
 const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
-  
+
   if (!toasts.length) return null;
 
   return (
     <div className="toast-container">
       {toasts.map((toast) => (
-        <Toast 
-          key={toast.id} 
-          toast={toast} 
-          onClose={() => removeToast(toast.id)} 
+        <Toast
+          key={toast.id}
+          toast={toast}
+          onClose={() => removeToast(toast.id)}
         />
       ))}
     </div>
@@ -89,14 +91,14 @@ const Toast = ({ toast, onClose }) => {
     setIsExiting(true);
     setTimeout(() => {
       onClose();
-    }, 300); 
+    }, 300);
   };
 
   useEffect(() => {
     if (duration !== Infinity && duration > 0) {
-      const interval = 10; 
+      const interval = 10;
       const decrement = (100 * interval) / duration;
-      
+
       const timer = setInterval(() => {
         setProgress((prev) => {
           const newProgress = prev - decrement;
@@ -123,15 +125,15 @@ const Toast = ({ toast, onClose }) => {
   };
 
   return (
-    <div 
+    <div
       className={`toast toast-${type} ${isExiting ? 'toast-exit' : 'toast-enter'}`}
       role="alert"
     >
       <div className="toast-content">
         <span className="toast-icon">{getIcon()}</span>
         <p className="toast-message">{message}</p>
-        <button 
-          className="toast-close" 
+        <button
+          className="toast-close"
           onClick={handleClose}
           aria-label="Close toast"
         >
@@ -139,7 +141,7 @@ const Toast = ({ toast, onClose }) => {
         </button>
       </div>
       {duration !== Infinity && (
-        <div 
+        <div
           className="toast-progress-bar"
           style={{ width: `${progress}%` }}
         />
@@ -157,7 +159,7 @@ export const useToast = () => {
 };
 
 const Toaster = () => {
-  return null; 
+  return null;
 };
 
 export default Toaster;
