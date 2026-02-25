@@ -152,7 +152,7 @@ function StageStatus({ batchData }) {
     return (
         <div className="stage-status-section">
             <h3 className="section-title" style={{ fontSize: '1.1rem', marginBottom: '15px' }}>
-                <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                {/* <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} /> */}
                 Batch Progress Status
             </h3>
 
