@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "../../components/AppLayout";
 import { ToastProvider, useToast } from "../../components/common/Toaster";
 import "../../styles/pages/batch-reports.css";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import PropTypes from 'prop-types';
 
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -23,6 +26,11 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import PersonIcon from '@mui/icons-material/Person';
 import BatchPredictionIcon from '@mui/icons-material/BatchPrediction';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -51,6 +59,13 @@ const OPERATION_STAGES = [
     { id: 8, name: "BP 2", apiKey: "bunker_process2" },
     { id: 9, name: "BP 3", apiKey: "bunker_process3" },
     { id: 10, name: "TP", apiKey: "tunnel_process" }
+];
+
+const MAIN_STAGES = [
+    { id: 1, name: "Soaking", key: "soaking" },
+    { id: 2, name: "Unified Process", key: "unified_process" },
+    { id: 3, name: "Bunker Process", key: "bunker_process" },
+    { id: 4, name: "Tunnel Management", key: "tunnel_process" }
 ];
 
 function formatWithCommas(value) {
@@ -103,6 +118,217 @@ function findMatchingEntry(entries, materialName) {
         entry.name && entry.name.toUpperCase() === materialName
     );
 }
+
+function StageStatus({ batchData }) {
+    if (!batchData) return null;
+
+    const { current_stage, status } = batchData;
+
+    if (status === "completed") {
+        return (
+            <div className="stage-status-section">
+                <h3 className="section-title" style={{ fontSize: '1.1rem', marginBottom: '15px' }}>
+                    <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                    Batch Progress Status
+                </h3>
+                <div className="status-card completed">
+                    <div className="status-header">
+                        <CheckCircleIcon style={{ color: '#10b981', fontSize: '24px' }} />
+                        <span className="status-badge completed">Completed</span>
+                    </div>
+                    <p className="status-message">This batch has been completed successfully</p>
+                </div>
+            </div>
+        );
+    }
+
+    const currentStageIndex = MAIN_STAGES.findIndex(
+        stage => stage.name.toLowerCase() === current_stage?.toLowerCase()
+    );
+
+    const previousStage = currentStageIndex > 0 ? MAIN_STAGES[currentStageIndex - 1] : null;
+    const nextStage = currentStageIndex < MAIN_STAGES.length - 1 ? MAIN_STAGES[currentStageIndex + 1] : null;
+
+    return (
+        <div className="stage-status-section">
+            <h3 className="section-title" style={{ fontSize: '1.1rem', marginBottom: '15px' }}>
+                <TimelineIcon style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                Batch Progress Status
+            </h3>
+
+            <div className="status-container">
+                {/* Current Stage */}
+                <div className="status-card current">
+                    <div className="status-header">
+                        <TimerIcon style={{ color: '#3b82f6', fontSize: '24px' }} />
+                        <span className="status-badge in-progress">In Progress</span>
+                    </div>
+                    <div className="stage-info">
+                        <span className="stage-label">Current Stage:</span>
+                        <span className="stage-value current">{current_stage || 'Not started'}</span>
+                    </div>
+                </div>
+
+                {/* Previous and Next Stages */}
+                {(previousStage || nextStage) && (
+                    <div className="stage-navigation">
+                        {previousStage && (
+                            <div className="stage-card previous">
+                                <ArrowBackIcon className="nav-icon" />
+                                <div className="stage-details">
+                                    <span className="stage-label">Previous Stage</span>
+                                    <span className="stage-name">{previousStage.name}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {nextStage && (
+                            <div className="stage-card next">
+                                <div className="stage-details">
+                                    <span className="stage-label">Next Stage</span>
+                                    <span className="stage-name">{nextStage.name}</span>
+                                </div>
+                                <ArrowForwardIcon className="nav-icon" />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <style jsx>{`
+        .stage-status-section {
+          margin-bottom: 30px;
+          padding: 20px;
+          background: #f8fafc;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .status-container {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .status-card {
+          padding: 16px;
+          border-radius: 6px;
+          background: white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .status-card.completed {
+          border-left: 4px solid #10b981;
+          background: #f0fdf4;
+        }
+
+        .status-card.current {
+          border-left: 4px solid #3b82f6;
+        }
+
+        .status-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .status-badge {
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 500;
+        }
+
+        .status-badge.completed {
+          background: #10b981;
+          color: white;
+        }
+
+        .status-badge.in-progress {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .status-message {
+          color: #374151;
+          margin: 0;
+          font-size: 0.95rem;
+        }
+
+        .stage-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 1rem;
+        }
+
+        .stage-label {
+          color: #64748b;
+          font-weight: 500;
+          min-width: 100px;
+        }
+
+        .stage-value.current {
+          font-weight: 600;
+          color: #3b82f6;
+          font-size: 1.1rem;
+        }
+
+        .stage-navigation {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15px;
+          margin-top: 10px;
+        }
+
+        .stage-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .stage-card.previous {
+          border-left: 3px solid #f59e0b;
+        }
+
+        .stage-card.next {
+          border-right: 3px solid #8b5cf6;
+        }
+
+        .stage-details {
+          flex: 1;
+        }
+
+        .stage-name {
+          display: block;
+          font-weight: 600;
+          color: #1e293b;
+          margin-top: 2px;
+        }
+
+        .nav-icon {
+          color: #94a3b8;
+          font-size: 20px;
+        }
+
+        @media (max-width: 768px) {
+          .stage-navigation {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+        </div>
+    );
+}
+
+StageStatus.propTypes = {
+    batchData: PropTypes.object
+};
 
 function FormulationTable({ entries = [] }) {
     const readOnlyStyle = { background: "#f0f4f8", cursor: "not-allowed" };
@@ -324,6 +550,17 @@ function OperationTimelineTable({ operationData = {} }) {
         return acc;
     }, { totalOperation: 0, totalResting: 0 });
 
+    // const getRemarks = (stageName, operation) => {
+    //   if (!operation) return "-";
+
+    //   if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+    //     return "Not started";
+    //   } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+    //     return "Completed";
+    //   }
+    //   return "-";
+    // };
+
     return (
         <div className="formulation-table-container" style={{ marginTop: "30px" }}>
             <h3 className="table-title">Operation Timeline</h3>
@@ -344,15 +581,6 @@ function OperationTimelineTable({ operationData = {} }) {
                                 operation_hours: 0,
                                 rest_hours: 0
                             };
-
-                            let remarks = "-";
-                            if (operation.operation_hours === 0 && operation.rest_hours === 0) {
-                                remarks = "Not started";
-                            } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
-                                remarks = "In progress";
-                            } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
-                                remarks = "Completed";
-                            }
 
                             return (
                                 <tr key={stage.id}>
@@ -381,7 +609,7 @@ function OperationTimelineTable({ operationData = {} }) {
                                     <td>
                                         <input
                                             type="text"
-                                            value={remarks}
+                                            // value={getRemarks(stage.name, operation)}
                                             readOnly
                                             className="table-input"
                                             placeholder="-"
@@ -636,6 +864,213 @@ export default function BatchReportsContent() {
         }, 500);
     };
 
+    // Export to PDF
+    const handleExportPDF = () => {
+        try {
+            if (!batchData) return;
+
+            const doc = new jsPDF();
+            let yPos = 20;
+
+            // Title
+            doc.setFontSize(16);
+            doc.text(`Batch Report - ${batchData.batch_number || batchId}`, 14, yPos);
+            yPos += 10;
+
+            // Batch Summary
+            doc.setFontSize(14);
+            doc.text('Batch Summary', 14, yPos);
+            yPos += 7;
+
+            doc.setFontSize(10);
+            const startDate = batchData.start_date || batchData.start_time;
+            const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
+            const totalHours = calculateTotalHours(startDate, plannedDate);
+
+            doc.text(`Batch Number: ${batchData.batch_number || ''}`, 14, yPos);
+            yPos += 6;
+            doc.text(`Start Date: ${startDate ? new Date(startDate).toLocaleString() : 'Not set'}`, 14, yPos);
+            yPos += 6;
+            doc.text(`Planned Completion: ${plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'}`, 14, yPos);
+            yPos += 6;
+            doc.text(`Total Hours: ${totalHours || 'Not calculated'}`, 14, yPos);
+            yPos += 6;
+
+            if (batchData.remarks) {
+                doc.text(`Remarks: ${batchData.remarks}`, 14, yPos);
+                yPos += 10;
+            } else {
+                yPos += 4;
+            }
+
+            // Formulation Table
+            doc.setFontSize(14);
+            doc.text('Raw Materials Formulation', 14, yPos);
+            yPos += 5;
+
+            const formulationColumn = ["S.No", "Material", "Fresh Wt", "Moist %", "Dry Wt", "N2 %", "Total N2", "Ash %", "Total Ash", "%"];
+            const formulationRows = [];
+
+            ALL_MATERIALS.forEach((material) => {
+                const entry = findMatchingEntry(batchData.formulation_entries, material.name);
+                formulationRows.push([
+                    material.id,
+                    material.name,
+                    entry?.wet_weight || '-',
+                    entry?.moisture_percent || '-',
+                    entry?.dry_weight || '-',
+                    entry?.nitrogen_percent || '-',
+                    entry?.nitrogen_total || '-',
+                    entry?.ash_percent || '-',
+                    entry?.ash_total || '-',
+                    entry?.total_percent || '-'
+                ]);
+            });
+
+            doc.autoTable({
+                head: [formulationColumn],
+                body: formulationRows,
+                startY: yPos + 5,
+                theme: 'grid',
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+            });
+
+            // Operation Timeline Table
+            yPos = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(14);
+            doc.text('Operation Timeline', 14, yPos);
+
+            const operationColumn = ["S.No", "Operation Stage", "Operation Time", "Resting Time", "Remarks"];
+            const operationRows = [];
+
+            OPERATION_STAGES.forEach((stage) => {
+                const operation = batchData.operation_timeline?.[stage.apiKey] || {
+                    operation_hours: 0,
+                    rest_hours: 0
+                };
+
+                let remarks = "-";
+                if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+                    remarks = "Not started";
+                } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
+                    remarks = "In progress";
+                } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+                    remarks = "Completed";
+                }
+
+                operationRows.push([
+                    stage.id,
+                    stage.name,
+                    operation.operation_hours?.toFixed(1) || '0.0',
+                    operation.rest_hours?.toFixed(1) || '0.0',
+                    remarks
+                ]);
+            });
+
+            doc.autoTable({
+                head: [operationColumn],
+                body: operationRows,
+                startY: yPos + 5,
+                theme: 'grid',
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+            });
+
+            doc.save(`batch-report-${batchData.batch_number || batchId}.pdf`);
+            toast.success('PDF exported successfully');
+        } catch (error) {
+            console.error('PDF export error:', error);
+            toast.error('Failed to export PDF');
+        }
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        try {
+            if (!batchData) return;
+
+            const wb = XLSX.utils.book_new();
+
+            // Batch Summary Sheet
+            const startDate = batchData.start_date || batchData.start_time;
+            const plannedDate = batchData.planned_comp_date || batchData.planned_comp_time;
+            const totalHours = calculateTotalHours(startDate, plannedDate);
+
+            const summaryData = [
+                ['Batch Summary'],
+                ['Batch Number', batchData.batch_number || ''],
+                ['Start Date', startDate ? new Date(startDate).toLocaleString() : 'Not set'],
+                ['Planned Completion', plannedDate ? new Date(plannedDate).toLocaleString() : 'Not set'],
+                ['Total Hours', totalHours || 'Not calculated'],
+                ['Remarks', batchData.remarks || '']
+            ];
+
+            const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+            // Formulation Sheet 
+            const formulationData = [
+                ['S.No', 'Material', 'Fresh Weight', 'Moist %', 'Dry Wt', 'N2 %', 'Total N2', 'Ash %', 'Total Ash', '%'],
+                ...ALL_MATERIALS.map((material) => {
+                    const entry = findMatchingEntry(batchData.formulation_entries, material.name);
+                    return [
+                        material.id,
+                        material.name,
+                        entry?.wet_weight || '-',
+                        entry?.moisture_percent || '-',
+                        entry?.dry_weight || '-',
+                        entry?.nitrogen_percent || '-',
+                        entry?.nitrogen_total || '-',
+                        entry?.ash_percent || '-',
+                        entry?.ash_total || '-',
+                        entry?.total_percent || '-'
+                    ];
+                })
+            ];
+
+            const formulationSheet = XLSX.utils.aoa_to_sheet(formulationData);
+            XLSX.utils.book_append_sheet(wb, formulationSheet, 'Formulation');
+
+            // Operation Timeline Sheet
+            const operationData = [
+                ['S.No', 'Operation Stage', 'Operation Time (hrs)', 'Resting Time (hrs)', 'Remarks'],
+                ...OPERATION_STAGES.map((stage) => {
+                    const operation = batchData.operation_timeline?.[stage.apiKey] || {
+                        operation_hours: 0,
+                        rest_hours: 0
+                    };
+
+                    let remarks = "-";
+                    if (operation.operation_hours === 0 && operation.rest_hours === 0) {
+                        remarks = "Not started";
+                    } else if (operation.operation_hours > 0 && operation.rest_hours === 0) {
+                        remarks = "In progress";
+                    } else if (operation.operation_hours > 0 && operation.rest_hours > 0) {
+                        remarks = "Completed";
+                    }
+
+                    return [
+                        stage.id,
+                        stage.name,
+                        operation.operation_hours?.toFixed(1) || '0.0',
+                        operation.rest_hours?.toFixed(1) || '0.0',
+                        remarks
+                    ];
+                })
+            ];
+
+            const operationSheet = XLSX.utils.aoa_to_sheet(operationData);
+            XLSX.utils.book_append_sheet(wb, operationSheet, 'Operation Timeline');
+
+            XLSX.writeFile(wb, `batch-report-${batchData.batch_number || batchId}.xlsx`);
+            toast.success('Excel exported successfully');
+        } catch (error) {
+            console.error('Excel export error:', error);
+            toast.error('Failed to export Excel');
+        }
+    };
+
     return (
         <AppLayout title="Batch Reports">
             <div className="add-batch-card">
@@ -667,12 +1102,18 @@ export default function BatchReportsContent() {
                         </div>
                     </div>
 
-                    {/* Action Buttons - Only Print remains */}
+                    {/* Action Buttons */}
                     {batchData && (
                         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                             <button onClick={handlePrint} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <PrintIcon /> Print
                             </button>
+                            {/* <button onClick={handleExportPDF} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <PictureAsPdfIcon /> PDF
+              </button> */}
+                            {/* <button onClick={handleExportExcel} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <TableChartIcon /> Excel
+              </button> */}
                         </div>
                     )}
 
@@ -686,6 +1127,7 @@ export default function BatchReportsContent() {
                     {!loading && batchData ? (
                         <div id="report-content" ref={reportContentRef}>
                             <BatchSummary batchData={batchData} />
+                            <StageStatus batchData={batchData} />
                             <FormulationTable entries={batchData.formulation_entries || []} />
                             <OperationTimelineTable operationData={batchData.operation_timeline || {}} />
                         </div>

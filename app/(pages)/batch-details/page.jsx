@@ -12,13 +12,14 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import AddchartIcon from '@mui/icons-material/Addchart';
+import AssessmentIcon from '@mui/icons-material/Assessment'; // Report icon
 
-const EMPTY = { 
-  batchId: "", 
-  bunkerId: "", 
-  dateAdded: "", 
-  position: "", 
-  notes: "" 
+const EMPTY = {
+  batchId: "",
+  bunkerId: "",
+  dateAdded: "",
+  position: "",
+  notes: ""
 };
 
 export default function AddBatchToBunker() {
@@ -40,13 +41,13 @@ export default function AddBatchToBunker() {
       try {
         setLoading(true);
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/batches`);
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch batches');
         }
-        
+
         const result = await response.json();
-        
+
         if (Array.isArray(result)) {
           setBatches(
             result.sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
@@ -107,9 +108,9 @@ export default function AddBatchToBunker() {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault(); 
-    setSaved(true); 
-    setForm(EMPTY); 
+    e.preventDefault();
+    setSaved(true);
+    setForm(EMPTY);
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -125,12 +126,20 @@ export default function AddBatchToBunker() {
     router.push(`/add-new-batch?edit=${batch.id}`);
   };
 
+  const handleReportClick = (batch) => {
+    const params = new URLSearchParams({
+      batch: batch.batch_number,
+      batchId: batch.id
+    });
+    router.push(`/batch-reports?${params.toString()}`);
+  };
+
   const handleUpdateClick = (e, batch) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     setMenuPosition({
       top: rect.bottom + window.scrollY + 5,
-      left: rect.left + window.scrollX - 150 
+      left: rect.left + window.scrollX - 150
     });
     setSelectedBatch(batch);
     setShowRedirectMenu(true);
@@ -138,14 +147,14 @@ export default function AddBatchToBunker() {
 
   const handleRedirect = (path) => {
     if (!selectedBatch) return;
-    
+
     setShowRedirectMenu(false);
-    
+
     const params = new URLSearchParams({
       batch: selectedBatch.batch_number,
       batchId: selectedBatch.id
     });
-    
+
     router.push(`${path}?${params.toString()}`);
   };
 
@@ -156,7 +165,7 @@ export default function AddBatchToBunker() {
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
-    
+
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
@@ -184,7 +193,7 @@ export default function AddBatchToBunker() {
         pageNumbers.push(totalPages);
       }
     }
-    
+
     return pageNumbers;
   };
 
@@ -192,11 +201,11 @@ export default function AddBatchToBunker() {
     const handleClickOutside = () => {
       setShowRedirectMenu(false);
     };
-    
+
     if (showRedirectMenu) {
       document.addEventListener('click', handleClickOutside);
     }
-    
+
     return () => {
       document.removeEventListener('click', handleClickOutside);
     };
@@ -210,56 +219,56 @@ export default function AddBatchToBunker() {
         </div>
       )}
 
-{showRedirectMenu && selectedBatch && (
-  <div 
-    className="redirect-menu-overlay"
-    onClick={() => setShowRedirectMenu(false)}
-  >
-    <div 
-      className="redirect-menu-card"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="redirect-menu-header">
-        <span>Redirect Batch</span>
-        <button 
-          className="close-menu-btn"
+      {showRedirectMenu && selectedBatch && (
+        <div
+          className="redirect-menu-overlay"
           onClick={() => setShowRedirectMenu(false)}
         >
-          <CloseIcon fontSize="small" />
-        </button>
-      </div>
-      
-      <div className="redirect-menu-content">
-        
-        <div className="redirect-menu-items">
-          <button 
-            className="redirect-menu-item"
-            onClick={() => handleRedirect('/soaking')}
+          <div
+            className="redirect-menu-card"
+            onClick={(e) => e.stopPropagation()}
           >
-            Soaking
-          </button>
-          <button 
-            className="redirect-menu-item"
-            onClick={() => handleRedirect('/unified-platform')}
-          >
-            Unified Process
-          </button>
-          <button 
-            className="redirect-menu-item"
-            onClick={() => handleRedirect('/bunker-management')}
-          >
-            Bunker Management
-          </button>
-          <button 
-            className="redirect-menu-item"
-            onClick={() => handleRedirect('/tunnel-management')}
-          >
-            Tunnel Management
-          </button>
-        </div>
-        
-        <div className="redirect-menu-footer">
-          {/* <button 
+            <div className="redirect-menu-header">
+              <span>Redirect Batch</span>
+              <button
+                className="close-menu-btn"
+                onClick={() => setShowRedirectMenu(false)}
+              >
+                <CloseIcon fontSize="small" />
+              </button>
+            </div>
+
+            <div className="redirect-menu-content">
+
+              <div className="redirect-menu-items">
+                <button
+                  className="redirect-menu-item"
+                  onClick={() => handleRedirect('/soaking')}
+                >
+                  Soaking
+                </button>
+                <button
+                  className="redirect-menu-item"
+                  onClick={() => handleRedirect('/unified-platform')}
+                >
+                  Unified Process
+                </button>
+                <button
+                  className="redirect-menu-item"
+                  onClick={() => handleRedirect('/bunker-management')}
+                >
+                  Bunker Management
+                </button>
+                <button
+                  className="redirect-menu-item"
+                  onClick={() => handleRedirect('/tunnel-management')}
+                >
+                  Tunnel Management
+                </button>
+              </div>
+
+              <div className="redirect-menu-footer">
+                {/* <button 
             className="redirect-btn"
             onClick={() => {
               if (selectedBatch) {
@@ -270,11 +279,11 @@ export default function AddBatchToBunker() {
           >
             Redirect
           </button> */}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
 
       <div className="card" style={{ marginTop: "2rem" }}>
         <div className="card-header">
@@ -282,7 +291,7 @@ export default function AddBatchToBunker() {
           <div className="header-controls">
             <span className="total-count">Total: {batches.length} entries</span>
             <div className="view-toggle">
-              <button 
+              <button
                 className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
                 onClick={() => toggleViewMode('table')}
                 title="Table View"
@@ -290,7 +299,7 @@ export default function AddBatchToBunker() {
               >
                 <ViewListIcon />
               </button>
-              <button 
+              <button
                 className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
                 onClick={() => toggleViewMode('grid')}
                 title="Grid View"
@@ -301,7 +310,7 @@ export default function AddBatchToBunker() {
             </div>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -310,7 +319,7 @@ export default function AddBatchToBunker() {
         ) : error ? (
           <div className="error-container">
             <p className="error-message">Error: {error}</p>
-            <button 
+            <button
               className="retry-btn"
               onClick={() => window.location.reload()}
             >
@@ -328,8 +337,8 @@ export default function AddBatchToBunker() {
                       <th>Batch Number</th>
                       <th>Start Date</th>
                       <th>Start Time</th>
-                      <th>End Date</th>
-                      <th>End Time</th>
+                      <th>Status</th>
+                      <th>Current Stage</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -338,7 +347,7 @@ export default function AddBatchToBunker() {
                       currentItems.map((item) => (
                         <tr key={item.id}>
                           <td>
-                            <span 
+                            <span
                               className="batch-number"
                               onClick={() => handleViewDetails(item.batch_number)}
                             >
@@ -347,11 +356,19 @@ export default function AddBatchToBunker() {
                           </td>
                           <td>{formatDate(item.start_date)}</td>
                           <td>{formatTime(item.start_time)}</td>
-                          <td>{formatDate(item.planned_comp_date)}</td>
-                          <td>{formatTime(item.planned_comp_time)}</td>
+                          <td>
+                            <span className={`status-badge ${item.status?.toLowerCase() || 'unknown'}`}>
+                              {item.status || 'N/A'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`stage-badge ${item.current_stage?.toLowerCase() || 'unknown'}`}>
+                              {item.current_stage || 'N/A'}
+                            </span>
+                          </td>
                           <td>
                             <div className="action-buttons">
-                              <button 
+                              <button
                                 className="icon-button view-details-btn"
                                 onClick={(e) => handleUpdateClick(e, item)}
                                 title="Update/Redirect"
@@ -359,13 +376,21 @@ export default function AddBatchToBunker() {
                               >
                                 <AddchartIcon fontSize="small" />
                               </button>
-                              <button 
+                              <button
                                 className="icon-button menu-btn"
                                 onClick={() => handleEditClick(item)}
                                 title="Edit Batch"
                                 aria-label={`Edit batch ${item.batch_number}`}
                               >
                                 <EditIcon fontSize="small" />
+                              </button>
+                              <button
+                                className="icon-button report-btn"
+                                onClick={() => handleReportClick(item)}
+                                title="View Batch Report"
+                                aria-label={`View report for batch ${item.batch_number}`}
+                              >
+                                <AssessmentIcon fontSize="small" />
                               </button>
                             </div>
                           </td>
@@ -389,14 +414,14 @@ export default function AddBatchToBunker() {
                     {currentItems.map((item) => (
                       <div key={item.id} className="grid-card">
                         <div className="grid-card-header">
-                          <span 
+                          <span
                             className="batch-number"
                             onClick={() => handleViewDetails(item.batch_number)}
                           >
                             {item.batch_number}
                           </span>
                           <div className="grid-card-actions">
-                            <button 
+                            <button
                               className="icon-button view-details-btn"
                               onClick={(e) => handleUpdateClick(e, item)}
                               title="Update/Redirect"
@@ -404,7 +429,7 @@ export default function AddBatchToBunker() {
                             >
                               <AddchartIcon fontSize="small" />
                             </button>
-                            <button 
+                            <button
                               className="icon-button menu-btn"
                               onClick={() => handleEditClick(item)}
                               title="Edit Batch"
@@ -412,9 +437,17 @@ export default function AddBatchToBunker() {
                             >
                               <EditIcon fontSize="small" />
                             </button>
+                            <button
+                              className="icon-button report-btn"
+                              onClick={() => handleReportClick(item)}
+                              title="View Batch Report"
+                              aria-label={`View report for batch ${item.batch_number}`}
+                            >
+                              <AssessmentIcon fontSize="small" />
+                            </button>
                           </div>
                         </div>
-                        
+
                         <div className="grid-card-body">
                           <div className="grid-info-item">
                             <CalendarTodayIcon fontSize="small" className="grid-info-icon" />
@@ -423,7 +456,7 @@ export default function AddBatchToBunker() {
                               <span className="grid-info-value">{formatDateCompact(item.start_date)}</span>
                             </div>
                           </div>
-                          
+
                           <div className="grid-info-item">
                             <AccessTimeIcon fontSize="small" className="grid-info-icon" />
                             <div className="grid-info-content">
@@ -431,24 +464,22 @@ export default function AddBatchToBunker() {
                               <span className="grid-info-value">{formatTime(item.start_time)}</span>
                             </div>
                           </div>
-                          
+
                           <div className="grid-info-item">
-                            <EventNoteIcon fontSize="small" className="grid-info-icon" />
-                            <div className="grid-info-content">
-                              <span className="grid-info-label">End Date</span>
-                              <span className="grid-info-value">{formatDateCompact(item.planned_comp_date)}</span>
-                            </div>
+                            <span className="grid-info-label">Status</span>
+                            <span className={`status-badge ${item.status?.toLowerCase() || 'unknown'}`}>
+                              {item.status || 'N/A'}
+                            </span>
                           </div>
-                          
+
                           <div className="grid-info-item">
-                            <AccessTimeIcon fontSize="small" className="grid-info-icon" />
-                            <div className="grid-info-content">
-                              <span className="grid-info-label">End Time</span>
-                              <span className="grid-info-value">{formatTime(item.planned_comp_time)}</span>
-                            </div>
+                            <span className="grid-info-label">Current Stage</span>
+                            <span className={`stage-badge ${item.current_stage?.toLowerCase() || 'unknown'}`}>
+                              {item.current_stage || 'N/A'}
+                            </span>
                           </div>
                         </div>
-                        
+
                         {item.remarks && (
                           <div className="grid-card-footer">
                             <span className="remarks-label">Remarks:</span>
@@ -472,7 +503,7 @@ export default function AddBatchToBunker() {
                 <div className="pagination-info">
                   Showing {startIndex + 1} to {Math.min(endIndex, batches.length)} of {batches.length} entries
                 </div>
-                
+
                 <div className="pagination">
                   <button
                     className="pagination-btn"
@@ -482,7 +513,7 @@ export default function AddBatchToBunker() {
                   >
                     &laquo;
                   </button>
-                  
+
                   <div className="pagination-pages">
                     {getPageNumbers().map((page, index) => (
                       page === '...' ? (
@@ -500,7 +531,7 @@ export default function AddBatchToBunker() {
                       )
                     ))}
                   </div>
-                  
+
                   <button
                     className="pagination-btn"
                     onClick={() => handlePageChange(currentPage + 1)}
