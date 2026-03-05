@@ -283,7 +283,7 @@ export default function AddNewBatchContent({ apiEndpoint = '/batches' }) {
                 rowPercent: ""
             }))
         );
-
+ 
         if (batchData.formulation_entries && batchData.formulation_entries.length > 0) {
             const apiEntriesMap = {};
             batchData.formulation_entries.forEach(entry => {
@@ -337,7 +337,6 @@ const recomputeRow = useCallback((mat, updatedFields) => {
     const totalN2 = calcTotalN2(merged.dryWt, merged.n2Percent);
     const totalAsh = calcTotalAsh(merged.dryWt, merged.totalshPercent);
     
-    // Calculate fresh weight from dry weight and moist (calcWetWeight handles empty moist)
     const freshWeight = calcWetWeight(merged.dryWt, merged.moist);
     
     return { ...merged, freshWeight, totalN2, totalAsh };
