@@ -5,24 +5,20 @@ import { useAuth } from "./AuthContext";
 import "../styles/components/Sidebar.css";
 import Image from "next/image";
 
+import KeyboardDoubleArrowLeftIcon from '@mui/icons-material/KeyboardDoubleArrowLeft';
+import KeyboardDoubleArrowRightIcon from '@mui/icons-material/KeyboardDoubleArrowRight';
+
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: "home" },
   { label: "Forecast", href: "/forecast", icon: "forecast" },
   { divider: true },
   { label: "Add New Batch", href: "/add-new-batch", icon: "box" },
-  { label: "Soaking", href: "/soaking", icon: "soaking" },
-
-  // { label: "Unified Platform Process", href: "/unified-platform", icon: "platform"},
-  // { label: "Bunker Management",        href: "/bunker-management", icon: "bunker"},
-  // { label: "Tunnel Management",        href: "/tunnel-management", icon: "tunnel"},
-  { label: "Batch Reports", href: "/batch-reports", icon: "reports" },
-
-  // { label: "Add Batch to Bunker", href: "/add-batch-to-bunker", icon: "box-add"  },
-  // { label: "Update Batch",        href: "/update-batch",        icon: "refresh"  },
-  { divider: true },
   { label: "Batch Details", href: "/batch-details", icon: "list" },
-  // { label: "Bunker Details",      href: "/bunker-details",      icon: "bunker"   },
-  // { label: "Tunnel Details",      href: "/tunnel-details",      icon: "tunnel"   },
+  { label: "Batch Reports", href: "/batch-reports", icon: "reports" },
+  { divider: true },
+  { label: "Platform", href: "/platform", icon: "box-add" },
+  { label: "Tunnel Details", href: "/tunnel-details", icon: "tunnel" },
+  { label: "Bunker Details", href: "/bunker-details", icon: "bunker" },
   { divider: true, adminOnly: true },
   { label: "Create User", href: "/create-user", icon: "userplus", adminOnly: true },
 ];
@@ -37,12 +33,7 @@ const ICONS = {
   bunker: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /></svg>,
   tunnel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9a9 9 0 0 1 18 0v12H3V9z" /><line x1="12" y1="9" x2="12" y2="21" /></svg>,
   userplus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="22" y1="11" x2="16" y2="11" /></svg>,
-  soaking: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20M2 12a10 10 0 0 1 20 0M2 12a10 10 0 0 0 20 0M12 2v20M2 12h20" /><path d="M8 8l8 8M8 16l8-8" /></svg>,
-  platform: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="21" x2="9" y2="9" /></svg>,
   reports: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2" /><circle cx="12" cy="16" r="5" /><path d="M12 11v5" /><path d="M9 8V6" /><path d="M15 8V6" /></svg>,
-  collapse: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 3L3 21M3 3l18 18" /></svg>,
-  "collapse-left": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>,
-  "collapse-right": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>,
 };
 
 export default function Sidebar() {
@@ -51,22 +42,16 @@ export default function Sidebar() {
   const { user } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Function to check if a path is active (including sub-items)
   const isPathActive = (itemHref) => {
     if (pathname === itemHref) return true;
-    // For parent "Soaking" item, check if any child route is active
-    if (itemHref === "/soaking") {
-      return pathname?.startsWith("/soaking/");
-    }
+    if (itemHref === "/soaking") return pathname?.startsWith("/soaking/");
     return false;
   };
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const toggleSidebar = () => setIsCollapsed((prev) => !prev);
 
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <div className="logo-container">
@@ -79,11 +64,21 @@ export default function Sidebar() {
               priority
             />
             {!isCollapsed && <span className="logo-text">BritishAgro</span>}
+
+            {/* Toggle button — always visible */}
+            <button
+              className="collapse-toggle-btn"
+              onClick={toggleSidebar}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? (
+                <KeyboardDoubleArrowRightIcon fontSize="small" />
+              ) : (
+                <KeyboardDoubleArrowLeftIcon fontSize="small" />
+              )}
+            </button>
           </div>
         </div>
-        {/* <button className="collapse-btn" onClick={toggleSidebar} title={isCollapsed ? "Expand" : "Collapse"}>
-          {isCollapsed ? ICONS["collapse-right"] : ICONS["collapse-left"]}
-        </button> */}
       </div>
 
       <nav className="sidebar-nav">
@@ -106,8 +101,6 @@ export default function Sidebar() {
             >
               {ICONS[item.icon]}
               {!isCollapsed && <span>{item.label}</span>}
-
-              {/* Tooltip for collapsed mode */}
               {isCollapsed && (
                 <span className="sidebar-tooltip">{item.label}</span>
               )}

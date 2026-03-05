@@ -12,10 +12,10 @@ import GridViewIcon from '@mui/icons-material/GridView';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import AddchartIcon from '@mui/icons-material/Addchart';
-import AssessmentIcon from '@mui/icons-material/Assessment'; // Report icon
+import AssessmentIcon from '@mui/icons-material/Assessment'; 
 
 const EMPTY = {
-  batchId: "",
+  batchId: "", 
   bunkerId: "",
   dateAdded: "",
   position: "",
@@ -252,6 +252,12 @@ export default function AddBatchToBunker() {
                   onClick={() => handleRedirect('/unified-platform')}
                 >
                   Unified Process
+                </button>
+                <button
+                  className="redirect-menu-item"
+                  onClick={() => handleRedirect('/flip-process')}
+                >
+                  FLip Process
                 </button>
                 <button
                   className="redirect-menu-item"

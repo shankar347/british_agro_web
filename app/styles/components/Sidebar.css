@@ -1,82 +1,173 @@
-.sidebar { 
-  width: 240px; 
-  min-width: 240px; 
-  background: var(--sidebar-bg); 
-  display: flex; 
-  flex-direction: column; 
-  height: 100%; 
-  overflow-y: auto; 
-  z-index: 10; 
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 10;
+  transition: width 0.25s ease, min-width 0.25s ease;
 }
 
-.sidebar-logo { 
-  padding: 22px 24px; 
-  border-bottom: 1px solid rgba(255,255,255,0.1); 
+/* ── Collapsed state ── */
+.sidebar.collapsed {
+  width: 68px;
+  min-width: 68px;
+}
+
+/* ── Header / Logo ── */
+.sidebar-logo {
+  padding: 22px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .logo-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  /* When collapsed, center the logo + button */
+  justify-content: flex-start;
+}
+
+.sidebar.collapsed .logo-container {
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 }
 
 .logo-image {
   width: 40px;
   height: 40px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .logo-text {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.5px;
   white-space: nowrap;
+  flex: 1;
+  overflow: hidden;
 }
 
-.sidebar-nav { 
-  flex: 1; 
-  padding: 12px 0; 
+/* ── Collapse toggle button ── */
+.collapse-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+  margin-left: auto; /* push to far right when expanded */
 }
 
-.sidebar-item { 
-  display: flex; 
-  align-items: center; 
-  gap: 12px; 
-  padding: 11px 22px; 
-  color: var(--sidebar-text); 
-  font-size: 0.9rem; 
-  font-weight: 500; 
-  transition: background 0.15s, color 0.15s; 
-  cursor: pointer; 
-  user-select: none; 
-  border-left: 3px solid transparent; 
+.sidebar.collapsed .collapse-toggle-btn {
+  margin-left: 0; /* center when collapsed */
 }
 
-.sidebar-item:hover { 
-  background: var(--sidebar-hover); 
-  color: #fff; 
+.collapse-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
-.sidebar-item.active { 
-  background: var(--sidebar-active); 
-  color: var(--sidebar-active-text); 
-  border-left-color: var(--accent); 
+/* ── Nav ── */
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
 }
 
-.sidebar-item svg { 
-  width: 18px; 
-  height: 18px; 
-  flex-shrink: 0; 
-  opacity: 0.85; 
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 22px;
+  color: var(--sidebar-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  user-select: none;
+  border-left: 3px solid transparent;
+  position: relative;
+  white-space: nowrap;
 }
 
-.sidebar-item.active svg { 
-  opacity: 1; 
+/* Center icons when collapsed */
+.sidebar.collapsed .sidebar-item {
+  padding: 11px 0;
+  justify-content: center;
+  gap: 0;
 }
 
-.sidebar-divider { 
-  height: 1px; 
-  background: rgba(255,255,255,0.08); 
-  margin: 8px 16px; 
+.sidebar-item:hover {
+  background: var(--sidebar-hover);
+  color: #fff;
+}
+
+.sidebar-item.active {
+  background: var(--sidebar-active);
+  color: var(--sidebar-active-text);
+  border-left-color: var(--accent);
+}
+
+.sidebar-item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.sidebar-item.active svg {
+  opacity: 1;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 16px;
+}
+
+/* ── Tooltip (shown in collapsed mode on hover) ── */
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e2535;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-tooltip::before {
+  content: "";
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: #1e2535;
+}
+
+.sidebar.collapsed .sidebar-item:hover .sidebar-tooltip {
+  opacity: 1;
 }

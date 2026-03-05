@@ -6,6 +6,8 @@ import { useAuth } from "./AuthContext";
 import "../styles/components/AppLayout.css";
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import MenuIcon from '@mui/icons-material/Menu';
+import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 
 export default function AppLayout({ children, title }) {
   const { user, logout, loading } = useAuth();

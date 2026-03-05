@@ -67,9 +67,17 @@ function formatWithCommas(value) {
 
 function calcWetWeight(dryWt, moist) {
     const dw = parseFloat(dryWt);
+    
+    if (isNaN(dw) || dw === 0) return "";
+    
+    if (moist === "" || moist === null || moist === undefined) {
+        return Math.round(dw);
+    }
+    
     const m = parseFloat(moist);
-    if (isNaN(dw) || isNaN(m) || m >= 100) return "";
-    if (m === 0) return "";
+    if (isNaN(m)) return Math.round(dw); 
+    if (m === 0) return Math.round(dw);
+    
     return Math.round(dw / (1 - m / 100));
 }
 
@@ -323,37 +331,38 @@ export default function AddNewBatchContent({ apiEndpoint = '/batches' }) {
         }
     };
 
-    const recomputeRow = useCallback((mat, updatedFields) => {
-        const merged = { ...mat, ...updatedFields };
-        const totalN2 = calcTotalN2(merged.dryWt, merged.n2Percent);
-        const totalAsh = calcTotalAsh(merged.dryWt, merged.totalshPercent);
+const recomputeRow = useCallback((mat, updatedFields) => {
+    const merged = { ...mat, ...updatedFields };
+    
+    const totalN2 = calcTotalN2(merged.dryWt, merged.n2Percent);
+    const totalAsh = calcTotalAsh(merged.dryWt, merged.totalshPercent);
+    
+    // Calculate fresh weight from dry weight and moist (calcWetWeight handles empty moist)
+    const freshWeight = calcWetWeight(merged.dryWt, merged.moist);
+    
+    return { ...merged, freshWeight, totalN2, totalAsh };
+}, []);
 
-        let freshWeight = merged.freshWeight;
-        if ("dryWt" in updatedFields || "moist" in updatedFields) {
-            const ww = calcWetWeight(merged.dryWt, merged.moist);
-            freshWeight = ww !== "" ? ww : "";
-        }
-        return { ...merged, freshWeight, totalN2, totalAsh };
-    }, []);
-
-    const handleMaterialChange = useCallback((id, field, value) => {
-        setMaterials((prev) => {
-            const updated = prev.map((mat) =>
-                mat.id !== id ? mat : recomputeRow(mat, { [field]: value })
-            );
-            const tempAgg = calcBatchAggregates(updated);
-            return updated.map((mat) => ({
-                ...mat,
-                rowPercent: calcRowPercent(
-                    getCategory(mat.name),
-                    mat.dryWt,
-                    tempAgg.totalStrawDW,
-                    tempAgg.totalManureDW,
-                    tempAgg.totalBatchDW
-                ),
-            }));
-        });
-    }, [recomputeRow]);
+const handleMaterialChange = useCallback((id, field, value) => {
+    setMaterials((prev) => {
+        const updated = prev.map((mat) =>
+            mat.id !== id ? mat : recomputeRow(mat, { [field]: value })
+        );
+        
+        const tempAgg = calcBatchAggregates(updated);
+        
+        return updated.map((mat) => ({
+            ...mat,
+            rowPercent: calcRowPercent(
+                getCategory(mat.name),
+                mat.dryWt,
+                tempAgg.totalStrawDW,
+                tempAgg.totalManureDW,
+                tempAgg.totalBatchDW
+            ),
+        }));
+    });
+}, [recomputeRow]);
 
     const handleBatchInfoChange = (e) => {
         const { name, value } = e.target;

@@ -1,76 +1,181 @@
-// "use client";
-// import AppLayout from "../../components/AppLayout";
-// import "../../styles/pages/tunnel-details.css";
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import AppLayout from "../../components/AppLayout";
+import { ToastProvider, useToast } from "../../components/common/Toaster";
+import ViewListIcon from "@mui/icons-material/ViewList";
+import GridViewIcon from "@mui/icons-material/GridView";
+import "../../styles/pages/tunnel-details.css";
 
-// const TUNNELS = [
-//   { id:"Tunnel 1", crop:"Wheat",  batch:"B-0041", startDate:"2026-02-10", endDate:"2026-02-24", temp:"18°C", humidity:"65%", status:"Active" },
-//   { id:"Tunnel 2", crop:"Barley", batch:"B-0039", startDate:"2026-02-08", endDate:"2026-02-20", temp:"16°C", humidity:"60%", status:"Active" },
-//   { id:"Tunnel 3", crop:"—",      batch:"—",      startDate:"—",          endDate:"—",           temp:"14°C", humidity:"55%", status:"Idle" },
-//   { id:"Tunnel 4", crop:"Oats",   batch:"B-0036", startDate:"2026-01-28", endDate:"2026-02-11", temp:"17°C", humidity:"62%", status:"Completed" },
-//   { id:"Tunnel 5", crop:"Rye",    batch:"B-0033", startDate:"2026-01-20", endDate:"2026-02-03", temp:"15°C", humidity:"58%", status:"Completed" },
-// ];
-// const STATUS_BADGE = { Active:"badge-success", Idle:"badge-neutral", Completed:"badge-info" };
-// const TOP_COLOR    = { Active:"var(--success)", Idle:"var(--border)", Completed:"var(--primary)" };
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// export default function TunnelDetails() {
-//   return (
-//     <AppLayout title="Tunnel Details">
-//       <div className="tunnel-grid">
-//         {TUNNELS.map((t) => (
-//           <div className="card" key={t.id} style={{ padding:20, borderTop:`3px solid ${TOP_COLOR[t.status]}` }}>
-//             <div className="tunnel-card-header">
-//               <h3 className="tunnel-card-title">{t.id}</h3>
-//               <span className={`badge ${STATUS_BADGE[t.status]}`}>{t.status}</span>
-//             </div>
-//             <div className="tunnel-fields">
-//               {[
-//                 { label:"Crop", value:t.crop },{ label:"Batch ID", value:t.batch },
-//                 { label:"Start Date", value:t.startDate },{ label:"End Date", value:t.endDate },
-//                 { label:"Temp", value:t.temp },{ label:"Humidity", value:t.humidity },
-//               ].map(({ label, value }) => (
-//                 <div key={label}>
-//                   <div className="tunnel-field-label">{label}</div>
-//                   <div className="tunnel-field-value">{value}</div>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-//       <div className="card">
-//         <h2 className="tunnel-summary-title">All Tunnels — Summary</h2>
-//         <div className="table-wrapper">
-//           <table>
-//             <thead><tr><th>Tunnel</th><th>Batch</th><th>Crop</th><th>Start Date</th><th>End Date</th><th>Temp</th><th>Humidity</th><th>Status</th></tr></thead>
-//             <tbody>
-//               {TUNNELS.map((t) => (
-//                 <tr key={t.id}>
-//                   <td><strong>{t.id}</strong></td><td>{t.batch}</td><td>{t.crop}</td><td>{t.startDate}</td><td>{t.endDate}</td>
-//                   <td>{t.temp}</td><td>{t.humidity}</td>
-//                   <td><span className={`badge ${STATUS_BADGE[t.status]}`}>{t.status}</span></td>
-//                 </tr>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-//     </AppLayout>
-//   );
-// }
+function TunnelsContent() {
+  const router = useRouter();
+  const toast = useToast();
+  const [tunnels, setTunnels] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("grid");
 
-import React from 'react'
-import AppLayout from '@/app/components/AppLayout'
+  useEffect(() => {
+    fetchTunnels();
+  }, []);
 
-const page = () => {
+  const fetchTunnels = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/tunnels`);
+      const json = await res.json();
+      if (json.success) {
+        setTunnels(json.data);
+      } else {
+        toast.error(json.message || "Failed to fetch tunnels");
+      }
+    } catch (error) {
+      toast.error("Failed to load tunnels");
+      console.error("Error loading tunnels:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCardClick = (id) => {
+    router.push(`/tunnel-detail/${id}`);
+  };
+
+  const renderGridView = () => (
+    <div className="tunnels-grid">
+      {tunnels.map((tunnel) => (
+        <div
+          key={tunnel.id}
+          className="tunnel-card"
+          onClick={() => handleCardClick(tunnel.id)}
+        >
+          <div className="tunnel-card__header">
+            <span className={`tunnel-capacity-badge ${tunnel.is_active ? "status-occupied" : "status-free"}`}>
+              {tunnel.is_active ? "Occupied" : "Free"}
+            </span>
+          </div>
+
+          <div className="tunnel-card__body">
+            <h3 className="tunnel-name">{tunnel.name}</h3>
+            <p className="tunnel-desc">{tunnel.description || "No description available"}</p>
+          </div>
+
+          <div className="tunnel-card__footer">
+            <span className="tunnel-footer-label">Max Capacity</span>
+            <span className="tunnel-footer-value">
+              {tunnel.max_capacity?.toLocaleString() || "0"} kg
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderListView = () => (
+    <table className="tunnels-table">
+      <thead>
+        <tr>
+          <th>Tunnel</th>
+          <th>Description</th>
+          <th>Max Capacity</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {tunnels.map((tunnel) => (
+          <tr
+            key={tunnel.id}
+            className="tunnel-row"
+            onClick={() => handleCardClick(tunnel.id)}
+          >
+            <td>
+              <div className="tunnel-info">
+                <span className="tunnel-name-cell">{tunnel.name}</span>
+              </div>
+            </td>
+            <td className="tunnel-desc-cell">{tunnel.description || "No description available"}</td>
+            <td>
+              <span className="tunnel-capacity-badge">
+                {tunnel.max_capacity?.toLocaleString() || "0"} kg
+              </span>
+            </td>
+            <td>
+              <span className={`tunnel-capacity-badge ${tunnel.is_active ? "status-occupied" : "status-free"}`}>
+                {tunnel.is_active ? "Occupied" : "Free"}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   return (
-    <>
-      <AppLayout>
-        <h1> 
-            <strong>Yet to work....</strong>
-        </h1>
-      </AppLayout>
-    </>
-  )
+    <AppLayout title="Tunnels">
+      <div className="tunnels-container">
+
+        {/* Header */}
+        <div className="tunnels-header-section">
+          <div>
+            <h1 className="tunnels-main-title">Tunnels</h1>
+            <p className="tunnels-subtitle">{tunnels.length} tunnels available</p>
+          </div>
+        </div>
+
+        {/* View Toggle */}
+        <div className="filters-section">
+          <div className="view-toggle">
+            <button
+              className={`view-toggle-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => setViewMode("grid")}
+              title="Grid View"
+            >
+              <GridViewIcon fontSize="small" />
+            </button>
+            <button
+              className={`view-toggle-btn ${viewMode === "list" ? "active" : ""}`}
+              onClick={() => setViewMode("list")}
+              title="List View"
+            >
+              <ViewListIcon fontSize="small" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Card */}
+        <div className={`tunnels-${viewMode}-card`}>
+          <div className="table-header">
+            <span className="tunnels-count">{tunnels.length} tunnels</span>
+          </div>
+
+          <div className={viewMode === "list" ? "table-wrapper" : "grid-wrapper"}>
+            {loading ? (
+              <div className="no-results">
+                <p>Loading tunnels...</p>
+              </div>
+            ) : tunnels.length === 0 ? (
+              <div className="no-results">
+                <h3>No tunnels found</h3>
+                <p>No tunnel data available</p>
+              </div>
+            ) : viewMode === "list" ? (
+              renderListView()
+            ) : (
+              renderGridView()
+            )}
+          </div>
+        </div>
+
+      </div>
+    </AppLayout>
+  );
 }
 
-export default page
+export default function TunnelsPage() {
+  return (
+    <ToastProvider>
+      <TunnelsContent />
+    </ToastProvider>
+  );
+}

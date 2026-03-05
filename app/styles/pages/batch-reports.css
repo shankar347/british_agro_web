@@ -709,3 +709,386 @@ body {
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-3 { margin-bottom: 0.75rem; }
 .mb-4 { margin-bottom: 1rem; }
+
+/* Batch Reports Page Styles */
+
+/* Stage Status Section */
+.stage-status-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.stage-status-section .status-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stage-status-section .status-card {
+  padding: 16px;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stage-status-section .status-card.completed {
+  border-left: 4px solid #10b981;
+  background: #f0fdf4;
+}
+
+.stage-status-section .status-card.current {
+  border-left: 4px solid #3b82f6;
+}
+
+.stage-status-section .status-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stage-status-section .status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.stage-status-section .status-badge.completed {
+  background: #10b981;
+  color: white;
+}
+
+.stage-status-section .status-badge.in-progress {
+  background: #3b82f6;
+  color: white;
+}
+
+.stage-status-section .status-message {
+  color: #374151;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.stage-status-section .stage-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+}
+
+.stage-status-section .stage-label {
+  color: #64748b;
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.stage-status-section .stage-value.current {
+  font-weight: 600;
+  color: #3b82f6;
+  font-size: 1.1rem;
+}
+
+.stage-status-section .stage-navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.stage-status-section .stage-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.stage-status-section .stage-card.previous {
+  border-left: 3px solid #f59e0b;
+}
+
+.stage-status-section .stage-card.next {
+  border-right: 3px solid #8b5cf6;
+}
+
+.stage-status-section .stage-details {
+  flex: 1;
+}
+
+.stage-status-section .stage-name {
+  display: block;
+  font-weight: 600;
+  color: #1e293b;
+  margin-top: 2px;
+}
+
+.stage-status-section .nav-icon {
+  color: #94a3b8;
+  font-size: 20px;
+}
+
+@media (max-width: 768px) {
+  .stage-status-section .stage-navigation {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Formulation Table */
+.formulation-table-container {
+  margin-bottom: 30px;
+}
+
+.formulation-table-container .table-title {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: #2d3748;
+}
+
+.formulation-table-container .table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.formulation-table-container .materials-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 1200px;
+}
+
+.formulation-table-container .materials-table th {
+  background-color: #f1f5f9;
+  padding: 8px 6px;
+  text-align: center;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 2px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.formulation-table-container .materials-table td {
+  padding: 4px 3px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.formulation-table-container .materials-table .totals-row {
+  background-color: #fef9c3;
+  font-weight: bold;
+}
+
+.formulation-table-container .table-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.85rem;
+  background-color: #f9fafb;
+}
+
+.formulation-table-container .table-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Totals Container */
+.formulation-table-container .totals-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.formulation-table-container .total-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.formulation-table-container .total-label {
+  font-weight: 600;
+  color: #4b5563;
+  min-width: 60px;
+}
+
+.formulation-table-container .total-input {
+  width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 500;
+  background-color: #f9fafb;
+}
+
+/* Batch Summary Section */
+.batch-summary-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.batch-summary-section .section-title {
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: #2d3748;
+}
+
+.batch-summary-section .batch-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.batch-summary-section .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-summary-section .form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 5px;
+}
+
+.batch-summary-section .form-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: #f9fafb;
+}
+
+.batch-summary-section .form-input:read-only {
+  background-color: #f0f4f8;
+  cursor: not-allowed;
+}
+
+.batch-summary-section .comments-group {
+  margin-top: 15px;
+}
+
+.batch-summary-section .form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  resize: vertical;
+  background-color: #f9fafb;
+}
+
+.batch-summary-section .form-textarea:read-only {
+  background-color: #f0f4f8;
+  cursor: not-allowed;
+}
+
+/* Loading Overlay */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+/* Print Styles */
+@media print {
+  /* Hide buttons and interactive elements */
+  .btn-primary,
+  .btn-secondary,
+  .temp-chart-controls,
+  .stage-status-section .status-header,
+  [data-testid],
+  .MuiSvgIcon-root {
+    display: none !important;
+  }
+
+  /* Ensure tables print properly */
+  .table-wrapper {
+    overflow: visible !important;
+  }
+
+  .materials-table {
+    page-break-inside: auto;
+  }
+
+  .materials-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  body::after {
+    content: "This is a system-generated report. For any queries, please contact the administrator.";
+    display: block;
+    margin-top: 30px;
+    font-size: 11px;
+    color: #888;
+    text-align: center;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .batch-summary-section .batch-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .formulation-table-container .totals-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .batch-summary-section .batch-info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .formulation-table-container .totals-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .stage-status-section .stage-navigation {
+    grid-template-columns: 1fr;
+  }
+}

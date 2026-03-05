@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppLayout from "../../components/AppLayout";
 import { ToastProvider, useToast } from "../../components/common/Toaster";
-import "../../styles/pages/unified-platform.css";
+import "../../styles/pages/flip-process.css";
 
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -13,7 +13,6 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import MoveDownIcon from '@mui/icons-material/MoveDown';
 
 const MATERIAL_TYPES = {
     'BAGASSE': 'BAGASSE',
@@ -28,20 +27,27 @@ const MATERIAL_DISPLAY_NAMES = {
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-const API_ENDPOINT = `${API_BASE_URL}/bunker-process-logs`;
-const API_FETCH_ENDPOINT = `${API_BASE_URL}/bunker-process-logs/batch`;
+const API_ENDPOINT = `${API_BASE_URL}/flip-process-logs`;
+const API_FETCH_ENDPOINT = `${API_BASE_URL}/flip-process-logs/batch`;
 const BATCH_FETCH_ENDPOINT = `${API_BASE_URL}/batches`;
 
 const STAGE_NAMES = [
-    "Bunker Process 1",
-    "Bunker Process 1 Rest",
-    "Bunker Process 2",
-    "Bunker Process 2 Rest",
-    "Bunker Process 3",
-    "Bunker Process 3 Rest",
-    "Bunker Process 4",
-    "Bunker Process 4 Rest"
+    "Flip Stage 1",
+    "Flip Stage 1 Rest",
+    "Flip Stage 2",
+    "Flip Stage 2 Rest",
+    "Flip Stage 3",
+    "Flip Stage 3 Rest"
 ];
+
+const STAGE_FIELD_NAMES = {
+    "Flip Stage 1": "flip_stage1",
+    "Flip Stage 1 Rest": "flip_stage1_rest",
+    "Flip Stage 2": "flip_stage2",
+    "Flip Stage 2 Rest": "flip_stage2_rest",
+    "Flip Stage 3": "flip_stage3",
+    "Flip Stage 3 Rest": "flip_stage3_rest"
+};
 
 const createEmptyTempReading = () => ({
     id: Date.now() + Math.random(),
@@ -67,18 +73,6 @@ const calcAvgTemperature = (readings) => {
     return avg.toFixed(1);
 };
 
-// Maps API stage_name field to substage array index
-const STAGE_FIELD_TO_INDEX = {
-    'bunker_process1': 0,
-    'bunker_process1_rest': 1,
-    'bunker_process2': 2,
-    'bunker_process2_rest': 3,
-    'bunker_process3': 4,
-    'bunker_process3_rest': 5,
-    'bunker_process4': 6,
-    'bunker_process4_rest': 7
-};
-
 const createEmptySubstage = (name) => ({
     name: name,
     startDate: '',
@@ -86,10 +80,8 @@ const createEmptySubstage = (name) => ({
     endDate: '',
     endTime: '',
     totalHours: '',
-    bunker: '',
-    bunkerLocked: false,
     moisture: '',
-    temperature: '',
+    temperature: '',      
     temperatureReadings: [],
     remarks: ''
 });
@@ -105,6 +97,11 @@ const createEmptyBatch = (batchNumber, materials = [], batchId = null) => {
         materialDisplayNames,
         batchData: null,
         existingRecords: {},
+        overallStartDate: '',
+        overallStartTime: '',
+        overallEndDate: '',
+        overallEndTime: '',
+        isCompleted: true,
         substages: STAGE_NAMES.map(name => createEmptySubstage(name))
     };
 };
@@ -136,7 +133,7 @@ const combineDateTime = (date, time) => {
     }
 };
 
-const formatDateTimeWithZ = (dateTimeStr) => {
+const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return null;
     try {
         const date = new Date(dateTimeStr);
@@ -147,7 +144,7 @@ const formatDateTimeWithZ = (dateTimeStr) => {
         const h = String(date.getHours()).padStart(2, '0');
         const mi = String(date.getMinutes()).padStart(2, '0');
         const s = String(date.getSeconds()).padStart(2, '0');
-        return `${y}-${mo}-${d}T${h}:${mi}:${s}Z`;
+        return `${y}-${mo}-${d}T${h}:${mi}:${s}`;
     } catch {
         return null;
     }
@@ -191,103 +188,84 @@ const hasCompleteData = (substages) => {
 const convertToApiPayload = (batch, materialType, isCompleted) => {
     const s = batch.substages;
 
-    const allStarts = [];
-    for (let i = 0; i < 8; i++) {
-        if (s[i]?.startDate && s[i]?.startTime) {
-            const start = combineDateTime(s[i].startDate, s[i].startTime);
-            if (start) allStarts.push(new Date(start).getTime());
-        }
-    }
+    const stageMapping = [
+        { index: 0, field: 'flip_stage1' },
+        { index: 1, field: 'flip_stage1_rest' },
+        { index: 2, field: 'flip_stage2' },
+        { index: 3, field: 'flip_stage2_rest' },
+        { index: 4, field: 'flip_stage3' },
+        { index: 5, field: 'flip_stage3_rest' }
+    ];
 
-    const overall_start_time = allStarts.length > 0
-        ? formatDateTimeWithZ(new Date(Math.min(...allStarts)))
-        : null;
+    // Calculate overall start and end times from all stages
+    let overallStartTime = null;
+    let overallEndTime = null;
+
+    stageMapping.forEach(({ index }) => {
+        const substage = s[index];
+        if (substage.startDate && substage.startTime) {
+            const startTime = combineDateTime(substage.startDate, substage.startTime);
+            if (startTime && (!overallStartTime || new Date(startTime) < new Date(overallStartTime))) {
+                overallStartTime = startTime;
+            }
+        }
+        if (substage.endDate && substage.endTime) {
+            const endTime = combineDateTime(substage.endDate, substage.endTime);
+            if (endTime && (!overallEndTime || new Date(endTime) > new Date(overallEndTime))) {
+                overallEndTime = endTime;
+            }
+        }
+    });
+
+    // If no overall times from stages, use batch-level times
+    if (!overallStartTime && batch.overallStartDate && batch.overallStartTime) {
+        overallStartTime = combineDateTime(batch.overallStartDate, batch.overallStartTime);
+    }
+    if (!overallEndTime && batch.overallEndDate && batch.overallEndTime) {
+        overallEndTime = combineDateTime(batch.overallEndDate, batch.overallEndTime);
+    }
 
     const payload = {
-        straw_type: materialType,
         batch_id: batch.id,
-        start_time: overall_start_time
+        straw_type: materialType,
+        start_time: overallStartTime ? formatDateTime(new Date(overallStartTime)) : null,
+        end_time: overallEndTime ? formatDateTime(new Date(overallEndTime)) : null,
+        iscompleted: isCompleted
     };
-
-    // Set top-level bunker_id from the first substage that has a bunker selected
-    const firstBunkerSubstage = batch.substages.find(s => s.bunker);
-    if (firstBunkerSubstage) {
-        payload.bunker_id = firstBunkerSubstage.bunker;
-    }
-
-    if (isCompleted !== undefined) {
-        payload.iscompleted = isCompleted;
-    }
-
-    const stageMapping = [
-        { index: 0, field: 'bunker_process1' },
-        { index: 1, field: 'bunker_process1_rest' },
-        { index: 2, field: 'bunker_process2' },
-        { index: 3, field: 'bunker_process2_rest' },
-        { index: 4, field: 'bunker_process3' },
-        { index: 5, field: 'bunker_process3_rest' },
-        { index: 6, field: 'bunker_process4' },
-        { index: 7, field: 'bunker_process4_rest' }
-    ];
 
     stageMapping.forEach(({ index, field }) => {
         const substage = s[index];
-        if (!substage) return;
+        const start = substage.startDate && substage.startTime
+            ? formatDateTime(combineDateTime(substage.startDate, substage.startTime)) : null;
+        const end = substage.endDate && substage.endTime
+            ? formatDateTime(combineDateTime(substage.endDate, substage.endTime)) : null;
 
-        const temp_list = [];
-        if (substage.temperatureReadings && substage.temperatureReadings.length > 0) {
-            substage.temperatureReadings.forEach(r => {
-                if (r.date && r.time) {
-                    const dateTime = combineDateTime(r.date, r.time);
-                    if (dateTime) {
-                        const sensor1 = r.sensor1 ? parseFloat(r.sensor1) : null;
-                        const sensor2 = r.sensor2 ? parseFloat(r.sensor2) : null;
-                        const sensor3 = r.sensor3 ? parseFloat(r.sensor3) : null;
-                        const sensor4 = r.sensor4 ? parseFloat(r.sensor4) : null;
+        const avgTemp = calcAvgTemperature(substage.temperatureReadings);
+        const tempValue = avgTemp !== '' ? parseFloat(avgTemp)
+            : substage.temperature ? parseFloat(substage.temperature) : null;
 
-                        const values = [sensor1, sensor2, sensor3, sensor4].filter(v => v !== null);
-                        const row_avg = values.length > 0
-                            ? parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2))
-                            : null;
+        const block = {
+            start_time: start,
+            end_time: end,
+            moisture: substage.moisture ? parseFloat(substage.moisture) : null,
+            temperature: tempValue,
+            remarks: substage.remarks || null
+        };
 
-                        temp_list.push({
-                            date_time: formatDateTimeWithZ(dateTime),
-                            sensor1,
-                            sensor2,
-                            sensor3,
-                            sensor4,
-                            row_avg
-                        });
-                    }
-                }
-            });
+        // Remove null/undefined values
+        Object.keys(block).forEach(k => {
+            if (block[k] === null || block[k] === undefined) delete block[k];
+        });
+
+        // Only add if there's any data
+        if (Object.keys(block).length > 0) {
+            payload[field] = block;
         }
+    });
 
-        const hasData = substage.startDate || substage.startTime || substage.endDate ||
-            substage.endTime || substage.moisture || temp_list.length > 0 ||
-            substage.remarks || substage.bunker;
-
-        if (hasData) {
-            const start = substage.startDate && substage.startTime
-                ? formatDateTimeWithZ(combineDateTime(substage.startDate, substage.startTime))
-                : null;
-
-            const end = substage.endDate && substage.endTime
-                ? formatDateTimeWithZ(combineDateTime(substage.endDate, substage.endTime))
-                : null;
-
-            const stageData = {};
-            if (start) stageData.start_time = start;
-            if (end) stageData.end_time = end;
-            if (substage.moisture) stageData.moisture = parseFloat(substage.moisture);
-            if (substage.bunker) stageData.bunker_id = substage.bunker;
-            stageData.temp_list = temp_list;
-            if (substage.remarks) stageData.remarks = substage.remarks;
-
-            if (Object.keys(stageData).length > 0) {
-                payload[field] = stageData;
-            }
-        }
+    // Remove null top-level keys
+    Object.keys(payload).forEach(k => {
+        if (payload[k] === null || payload[k] === undefined) delete payload[k];
     });
 
     return payload;
@@ -297,85 +275,73 @@ const convertApiResponseToUI = (apiData, batch) => {
     if (!apiData || !Array.isArray(apiData)) return batch;
 
     const materialDataMap = {};
-    apiData.forEach(item => {
-        if (item.straw_type) {
-            let materialKey = null;
-            if (item.straw_type === 'PADDY') materialKey = 'PADDY';
-            else if (item.straw_type === 'Wheat' || item.straw_type === 'WHEAT') materialKey = 'WHEAT';
-            else if (item.straw_type === 'BAGASSE') materialKey = 'BAGASSE';
-            if (materialKey) materialDataMap[materialKey] = item;
-        }
+    apiData.forEach(item => { 
+        if (item.straw_type) materialDataMap[item.straw_type] = item; 
     });
 
-    const mapping = [
-        { index: 0, field: 'bunker_process1' },
-        { index: 1, field: 'bunker_process1_rest' },
-        { index: 2, field: 'bunker_process2' },
-        { index: 3, field: 'bunker_process2_rest' },
-        { index: 4, field: 'bunker_process3' },
-        { index: 5, field: 'bunker_process3_rest' },
-        { index: 6, field: 'bunker_process4' },
-        { index: 7, field: 'bunker_process4_rest' }
+    const stageMapping = [
+        { index: 0, field: 'flip_stage1' },
+        { index: 1, field: 'flip_stage1_rest' },
+        { index: 2, field: 'flip_stage2' },
+        { index: 3, field: 'flip_stage2_rest' },
+        { index: 4, field: 'flip_stage3' },
+        { index: 5, field: 'flip_stage3_rest' }
     ];
 
-    batch.materialTypes.forEach(materialType => {
+    // Set overall times from first material with data
+    for (const materialType of batch.materialTypes) {
         const materialData = materialDataMap[materialType];
-        if (!materialData) return;
+        if (materialData) {
+            if (materialData.start_time && !batch.overallStartDate) {
+                const { date, time } = parseDateTime(materialData.start_time);
+                batch.overallStartDate = date;
+                batch.overallStartTime = time;
+            }
+            if (materialData.end_time && !batch.overallEndDate) {
+                const { date, time } = parseDateTime(materialData.end_time);
+                batch.overallEndDate = date;
+                batch.overallEndTime = time;
+            }
+            if (materialData.iscompleted !== undefined) {
+                batch.isCompleted = materialData.iscompleted;
+            }
+            break;
+        }
+    }
 
-        // top-level bunker_id is a fallback; per-stage bunker_id is restored below
-
-        mapping.forEach(({ index, field }) => {
+    stageMapping.forEach(({ index, field }) => {
+        for (const materialType of batch.materialTypes) {
+            const materialData = materialDataMap[materialType];
+            if (!materialData) continue;
+            
             const stageData = materialData[field];
-            if (!stageData || !batch.substages[index]) return;
-
-            const sub = batch.substages[index];
-
-            if (stageData.start_time && !sub.startDate) {
-                const { date, time } = parseDateTime(stageData.start_time);
-                sub.startDate = date;
-                sub.startTime = time;
+            if (stageData && batch.substages[index]) {
+                const sub = batch.substages[index];
+                
+                if (!sub.startDate && stageData.start_time) {
+                    const { date, time } = parseDateTime(stageData.start_time);
+                    sub.startDate = date; 
+                    sub.startTime = time;
+                }
+                if (!sub.endDate && stageData.end_time) {
+                    const { date, time } = parseDateTime(stageData.end_time);
+                    sub.endDate = date; 
+                    sub.endTime = time;
+                }
+                if (!sub.totalHours && stageData.duration_hours != null) {
+                    sub.totalHours = stageData.duration_hours.toFixed(1);
+                }
+                if (!sub.moisture && stageData.moisture != null) {
+                    sub.moisture = stageData.moisture.toString();
+                }
+                if (!sub.temperature && stageData.temperature != null) {
+                    sub.temperature = stageData.temperature.toString();
+                }
+                if (!sub.remarks && stageData.remarks) {
+                    sub.remarks = stageData.remarks;
+                }
             }
-            if (stageData.end_time && !sub.endDate) {
-                const { date, time } = parseDateTime(stageData.end_time);
-                sub.endDate = date;
-                sub.endTime = time;
-            }
-            if (stageData.duration_hours != null && !sub.totalHours) {
-                sub.totalHours = stageData.duration_hours.toFixed(1);
-            }
-            if (stageData.moisture != null && !sub.moisture) {
-                sub.moisture = stageData.moisture.toString();
-            }
-            if (stageData.bunker_id) {
-                sub.bunker = stageData.bunker_id;
-                sub.bunkerLocked = true;
-            }
-            if (stageData.remarks && !sub.remarks) {
-                sub.remarks = stageData.remarks;
-            }
-            if (stageData.temp_list && Array.isArray(stageData.temp_list) && stageData.temp_list.length > 0) {
-                const newReadings = stageData.temp_list.map(r => {
-                    let date = '', time = '';
-                    if (r.date_time) {
-                        const parsed = parseDateTime(r.date_time);
-                        date = parsed.date;
-                        time = parsed.time;
-                    }
-                    return {
-                        id: Date.now() + Math.random() + Math.random(),
-                        date,
-                        time,
-                        sensor1: r.sensor1 != null ? r.sensor1.toString() : '',
-                        sensor2: r.sensor2 != null ? r.sensor2.toString() : '',
-                        sensor3: r.sensor3 != null ? r.sensor3.toString() : '',
-                        sensor4: r.sensor4 != null ? r.sensor4.toString() : ''
-                    };
-                });
-                sub.temperatureReadings = newReadings;
-                const avg = calcAvgTemperature(sub.temperatureReadings);
-                if (avg !== '') sub.temperature = avg;
-            }
-        });
+        }
     });
 
     return batch;
@@ -403,12 +369,9 @@ const sendToApi = async (payload, materialType, displayName) => {
         const result = await response.json();
         return { success: true, data: result, materialType, displayName };
     } catch (error) {
-        console.error('API Error:', error);
         return { success: false, error: error.message, materialType, displayName };
     }
 };
-
-// ─── Temperature Readings Panel ───────────────────────────────────────────────
 
 const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly }) => {
     const readings = substage.temperatureReadings || [];
@@ -431,7 +394,7 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
 
     return (
         <tr className="temp-readings-row">
-            <td colSpan="10" style={{ padding: 0, background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+            <td colSpan="9" style={{ padding: 0, background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                 <div style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -440,7 +403,10 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
                                 Sensor Temperature Readings — {substage.name}
                             </span>
                             {avg !== '' && (
-                                <span style={{ background: '#fed7d7', color: '#c53030', padding: '2px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
+                                <span style={{
+                                    background: '#fed7d7', color: '#c53030', padding: '2px 10px',
+                                    borderRadius: '12px', fontSize: '12px', fontWeight: 700
+                                }}>
                                     Avg: {avg} °C
                                 </span>
                             )}
@@ -448,7 +414,12 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
                         {!readOnly && (
                             <button
                                 onClick={addReading}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#2b6cb0', color: '#fff', border: 'none', borderRadius: '6px', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '4px',
+                                    background: '#2b6cb0', color: '#fff', border: 'none',
+                                    borderRadius: '6px', padding: '5px 12px', cursor: 'pointer',
+                                    fontSize: '12px', fontWeight: 600
+                                }}
                             >
                                 <AddIcon style={{ fontSize: '14px' }} /> Add Reading
                             </button>
@@ -456,12 +427,20 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
                     </div>
 
                     {readings.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '16px', color: '#a0aec0', fontSize: '13px', background: '#fff', borderRadius: '6px', border: '1px dashed #cbd5e0' }}>
+                        <div style={{
+                            textAlign: 'center', padding: '16px', color: '#a0aec0',
+                            fontSize: '13px', background: '#fff', borderRadius: '6px',
+                            border: '1px dashed #cbd5e0'
+                        }}>
                             No temperature readings yet. Click "Add Reading" to log sensor data.
                         </div>
                     ) : (
                         <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e2e8f0', fontSize: '12px' }}>
+                            <table style={{
+                                width: '100%', borderCollapse: 'collapse',
+                                background: '#fff', borderRadius: '6px', overflow: 'hidden',
+                                border: '1px solid #e2e8f0', fontSize: '12px'
+                            }}>
                                 <thead>
                                     <tr style={{ background: '#edf2f7' }}>
                                         <th style={thStyle}>Date</th>
@@ -476,21 +455,60 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
                                 </thead>
                                 <tbody>
                                     {readings.map((r, i) => {
-                                        const rowVals = [r.sensor1, r.sensor2, r.sensor3, r.sensor4].map(v => parseFloat(v)).filter(v => !isNaN(v));
-                                        const rowAvg = rowVals.length > 0 ? (rowVals.reduce((a, b) => a + b, 0) / rowVals.length).toFixed(1) : '—';
+                                        const rowVals = [r.sensor1, r.sensor2, r.sensor3, r.sensor4]
+                                            .map(v => parseFloat(v)).filter(v => !isNaN(v));
+                                        const rowAvg = rowVals.length > 0
+                                            ? (rowVals.reduce((a, b) => a + b, 0) / rowVals.length).toFixed(1)
+                                            : '—';
                                         return (
                                             <tr key={r.id} style={{ background: i % 2 === 0 ? '#fff' : '#f7fafc' }}>
-                                                <td style={tdStyle}><input type="date" value={r.date} onChange={e => updateReading(r.id, 'date', e.target.value)} disabled={readOnly} style={inputStyle} /></td>
-                                                <td style={tdStyle}><input type="time" value={r.time} onChange={e => updateReading(r.id, 'time', e.target.value)} disabled={readOnly} style={inputStyle} /></td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        type="date"
+                                                        value={r.date}
+                                                        onChange={e => updateReading(r.id, 'date', e.target.value)}
+                                                        disabled={readOnly}
+                                                        style={inputStyle}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        type="time"
+                                                        value={r.time}
+                                                        onChange={e => updateReading(r.id, 'time', e.target.value)}
+                                                        disabled={readOnly}
+                                                        style={inputStyle}
+                                                    />
+                                                </td>
                                                 {['sensor1', 'sensor2', 'sensor3', 'sensor4'].map(sKey => (
                                                     <td key={sKey} style={tdStyle}>
-                                                        <input type="number" value={r[sKey]} onChange={e => updateReading(r.id, sKey, e.target.value)} disabled={readOnly} placeholder="°C" min="0" max="100" step="0.1" style={{ ...inputStyle, width: '80px', textAlign: 'center' }} />
+                                                        <input
+                                                            type="number"
+                                                            value={r[sKey]}
+                                                            onChange={e => updateReading(r.id, sKey, e.target.value)}
+                                                            disabled={readOnly}
+                                                            placeholder="°C"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.1"
+                                                            style={{ ...inputStyle, width: '80px', textAlign: 'center' }}
+                                                        />
                                                     </td>
                                                 ))}
-                                                <td style={{ ...tdStyle, fontWeight: 700, color: '#c53030', textAlign: 'center' }}>{rowAvg}</td>
+                                                <td style={{ ...tdStyle, fontWeight: 700, color: '#c53030', textAlign: 'center' }}>
+                                                    {rowAvg}
+                                                </td>
                                                 {!readOnly && (
                                                     <td style={tdStyle}>
-                                                        <button onClick={() => removeReading(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e53e3e', display: 'flex', alignItems: 'center' }} title="Remove reading">
+                                                        <button
+                                                            onClick={() => removeReading(r.id)}
+                                                            style={{
+                                                                background: 'none', border: 'none',
+                                                                cursor: 'pointer', color: '#e53e3e',
+                                                                display: 'flex', alignItems: 'center'
+                                                            }}
+                                                            title="Remove reading"
+                                                        >
                                                             <DeleteIcon style={{ fontSize: '16px' }} />
                                                         </button>
                                                     </td>
@@ -508,13 +526,21 @@ const TemperatureReadingsPanel = ({ substage, substageIndex, onUpdate, readOnly 
     );
 };
 
-const thStyle = { padding: '7px 10px', textAlign: 'center', fontWeight: 600, fontSize: '11px', color: '#4a5568', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' };
-const tdStyle = { padding: '5px 8px', textAlign: 'center', borderBottom: '1px solid #edf2f7', verticalAlign: 'middle' };
-const inputStyle = { border: '1px solid #e2e8f0', borderRadius: '4px', padding: '3px 6px', fontSize: '12px', background: '#fff', outline: 'none' };
+const thStyle = {
+    padding: '7px 10px', textAlign: 'center', fontWeight: 600,
+    fontSize: '11px', color: '#4a5568', borderBottom: '1px solid #e2e8f0',
+    whiteSpace: 'nowrap'
+};
+const tdStyle = {
+    padding: '5px 8px', textAlign: 'center', borderBottom: '1px solid #edf2f7',
+    verticalAlign: 'middle'
+};
+const inputStyle = {
+    border: '1px solid #e2e8f0', borderRadius: '4px', padding: '3px 6px',
+    fontSize: '12px', background: '#fff', outline: 'none'
+};
 
-// ─── Bunker Table ─────────────────────────────────────────────────────────────
-
-const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [], bunkerLoading = false }) => {
+const FlipTable = React.memo(({ batch, onUpdate, readOnly = false }) => {
     const toast = useToast();
     const [expandedRows, setExpandedRows] = useState({});
 
@@ -560,6 +586,7 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
 
         substage[field] = value;
 
+        // Auto-calc total hours
         if (substage.startDate && substage.startTime && substage.endDate && substage.endTime) {
             const start = new Date(`${substage.startDate}T${substage.startTime}`);
             const end = new Date(`${substage.endDate}T${substage.endTime}`);
@@ -574,13 +601,29 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
         onUpdate(updatedBatch);
     };
 
+    const handleOverallTimeChange = (field, value) => {
+        const updatedBatch = { ...batch };
+        if (field === 'overallStartDate' || field === 'overallStartTime') {
+            updatedBatch[field] = value;
+        } else if (field === 'overallEndDate' || field === 'overallEndTime') {
+            updatedBatch[field] = value;
+        }
+        onUpdate(updatedBatch);
+    };
+
     const getMinEndDate = (substage) => substage.startDate || undefined;
-    const getMinEndTime = (substage) => substage.startDate === substage.endDate ? substage.startTime : undefined;
-    const getMaterialsDisplay = () => batch.materialDisplayNames?.length > 0 ? batch.materialDisplayNames.join(' + ') : 'Bunker Process';
+    const getMinEndTime = (substage) =>
+        substage.startDate === substage.endDate ? substage.startTime : undefined;
+
+    const getMaterialsDisplay = () =>
+        batch.materialDisplayNames?.length > 0
+            ? batch.materialDisplayNames.join(' + ')
+            : 'Flip Process';
 
     return (
         <div className="table-section">
-            <h3 className="table-title">Bunker Process — {getMaterialsDisplay()}</h3>
+            <h3 className="table-title">Flip Process — {getMaterialsDisplay()}</h3>
+
             <div className="entry-table-container">
                 <table className="entry-table unified-platform-table">
                     <thead>
@@ -589,7 +632,6 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                             <th colSpan="2">Start</th>
                             <th colSpan="2">End</th>
                             <th rowSpan="2">Total Hours</th>
-                            <th rowSpan="2">Choose Bunker</th>
                             <th rowSpan="2">Moisture (%)</th>
                             <th rowSpan="2">Temperature (°C)</th>
                             <th rowSpan="2">Remarks</th>
@@ -606,14 +648,12 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                             const isExpanded = !!expandedRows[index];
                             const readingCount = substage.temperatureReadings?.length || 0;
                             const avg = calcAvgTemperature(substage.temperatureReadings);
-                            const selectedBunker = bunkers.find(b => b.id === substage.bunker);
 
                             return (
                                 <React.Fragment key={index}>
+                                    {/* Main data row */}
                                     <tr>
                                         <td className="substage-name">{substage.name}</td>
-
-                                        {/* Start Date */}
                                         <td>
                                             <input
                                                 type="date"
@@ -624,8 +664,6 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 max={substage.endDate || undefined}
                                             />
                                         </td>
-
-                                        {/* Start Time */}
                                         <td>
                                             <input
                                                 type="time"
@@ -636,8 +674,6 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 max={substage.startDate === substage.endDate ? substage.endTime : undefined}
                                             />
                                         </td>
-
-                                        {/* End Date */}
                                         <td>
                                             <input
                                                 type="date"
@@ -648,8 +684,6 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 min={getMinEndDate(substage)}
                                             />
                                         </td>
-
-                                        {/* End Time */}
                                         <td>
                                             <input
                                                 type="time"
@@ -660,8 +694,6 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 min={getMinEndTime(substage)}
                                             />
                                         </td>
-
-                                        {/* Total Hours */}
                                         <td>
                                             <input
                                                 type="text"
@@ -671,99 +703,34 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 placeholder="Auto"
                                             />
                                         </td>
-
-                                        {/* Choose Bunker */}
                                         <td>
-                                            {(readOnly || substage.bunkerLocked) ? (
-                                                <span
-                                                    title={selectedBunker ? `${selectedBunker.name} (saved)` : 'No bunker'}
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '3px',
-                                                        padding: '3px 8px',
-                                                        fontSize: '11px',
-                                                        fontWeight: 700,
-                                                        color: selectedBunker ? '#276749' : '#718096',
-                                                        // background: selectedBunker ? '#c6f6d5' : '#edf2f7',
-                                                        borderRadius: '12px',
-                                                        border: `1px solid ${selectedBunker ? '#9ae6b4' : '#e2e8f0'}`,
-                                                        whiteSpace: 'nowrap',
-                                                        cursor: 'default',
-                                                        userSelect: 'none',
-                                                        minWidth: '40px',
-                                                    }}
-                                                >
-                                                    {selectedBunker ? ('lock ' + selectedBunker.name) : '—'}
-                                                </span>
-                                            ) : (
-                                                <select
-                                                    value={substage.bunker || ''}
-                                                    onChange={e => handleInputChange(index, 'bunker', e.target.value)}
-                                                    disabled={bunkerLoading}
-                                                    className="table-input"
-                                                    style={{
-                                                        minWidth: '60px',
-                                                        maxWidth: '90px',
-                                                        padding: '3px 4px',
-                                                        fontSize: '12px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid #e2e8f0',
-                                                        background: '#fff',
-                                                        cursor: 'pointer',
-                                                        color: substage.bunker ? '#1a202c' : '#a0aec0',
-                                                        outline: 'none',
-                                                        height: '28px',
-                                                        width: '100%',
-                                                    }}
-                                                >
-                                                    <option value="">
-                                                        {bunkerLoading ? 'Loading...' : '-- Select --'}
-                                                    </option>
-                                                    {bunkers
-                                                        .filter(b => b.is_active === false)
-                                                        .map(b => (
-                                                            <option key={b.id} value={b.id}>
-                                                                {b.name}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
-                                            )}
-                                        </td>
-                                        {/* </td> */}
-
-                                        {/* Moisture */}
-                                        <td style={{ width: '70px' }}>
                                             <input
                                                 type="number"
                                                 value={substage.moisture || ''}
                                                 onChange={e => handleInputChange(index, 'moisture', e.target.value)}
                                                 className="table-input moisture-input"
                                                 placeholder="%"
-                                                min="0"
-                                                max="100"
-                                                step="0.1"
+                                                min="0" max="100" step="0.1"
                                                 disabled={readOnly}
-                                                style={{ maxWidth: '65px' }}
                                             />
                                         </td>
-
-                                        {/* Temperature */}
-                                        <td style={{ width: '100px' }}>
+                                        <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <input
                                                     type="number"
                                                     value={avg !== '' ? avg : substage.temperature || ''}
-                                                    onChange={e => { if (readingCount === 0) handleInputChange(index, 'temperature', e.target.value); }}
+                                                    onChange={e => {
+                                                        if (readingCount === 0) {
+                                                            handleInputChange(index, 'temperature', e.target.value);
+                                                        }
+                                                    }}
                                                     readOnly={readingCount > 0}
                                                     className="table-input temperature-input"
                                                     placeholder={readingCount > 0 ? 'Avg' : '°C'}
                                                     min="0" max="100" step="0.1"
                                                     disabled={readOnly}
                                                     title={readingCount > 0 ? 'Average computed from sensor readings' : 'Enter temperature manually or add sensor readings below'}
-                                                    style={{ flex: 1, minWidth: '45px', maxWidth: '55px' }}
+                                                    style={{ flex: 1, minWidth: '60px' }}
                                                 />
                                                 <button
                                                     onClick={() => toggleExpand(index)}
@@ -786,12 +753,13 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                                 >
                                                     <ThermostatIcon style={{ fontSize: '12px' }} />
                                                     {readingCount > 0 && <span>{readingCount}</span>}
-                                                    {isExpanded ? <ExpandLessIcon style={{ fontSize: '12px' }} /> : <ExpandMoreIcon style={{ fontSize: '12px' }} />}
+                                                    {isExpanded
+                                                        ? <ExpandLessIcon style={{ fontSize: '12px' }} />
+                                                        : <ExpandMoreIcon style={{ fontSize: '12px' }} />
+                                                    }
                                                 </button>
                                             </div>
                                         </td>
-
-                                        {/* Remarks */}
                                         <td>
                                             <input
                                                 type="text"
@@ -804,6 +772,7 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
                                         </td>
                                     </tr>
 
+                                    {/* Expandable sensor readings row */}
                                     {isExpanded && (
                                         <TemperatureReadingsPanel
                                             substage={substage}
@@ -822,9 +791,7 @@ const BunkerTable = React.memo(({ batch, onUpdate, readOnly = false, bunkers = [
     );
 });
 
-BunkerTable.displayName = 'BunkerTable';
-
-// ─── Batch Selection ──────────────────────────────────────────────────────────
+FlipTable.displayName = 'FlipTable';
 
 function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, initialBatchId }) {
     const [batchNumber, setBatchNumber] = useState(initialBatchNumber || '');
@@ -909,7 +876,7 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
 
     return (
         <div className="batch-selection">
-            <h2>Bunker Management Process Entry</h2>
+            <h2>Flip Process Management Entry</h2>
             {error && <div className="error-message">Error: {error}</div>}
             <div className="selection-panel">
                 <div className="new-batch-section">
@@ -937,35 +904,27 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
     );
 }
 
-// ─── Fetch Batch Data ─────────────────────────────────────────────────────────
-
 const fetchBatchData = async (batchId) => {
     try {
         const response = await fetch(`${API_FETCH_ENDPOINT}/${batchId}`);
         if (!response.ok) {
             if (response.status === 404) return { success: true, data: [] };
-            throw new Error(`Failed to fetch bunker data: ${response.status}`);
+            throw new Error(`Failed to fetch flip process data: ${response.status}`);
         }
         const responseData = await response.json();
-
         if (responseData.success && responseData.data) {
-            if (responseData.data.items && Array.isArray(responseData.data.items)) {
+            if (responseData.data.items && Array.isArray(responseData.data.items))
                 return { success: true, data: responseData.data.items };
-            }
-            if (Array.isArray(responseData.data)) {
+            if (Array.isArray(responseData.data))
                 return { success: true, data: responseData.data };
-            }
         }
         return { success: true, data: [] };
     } catch (error) {
-        console.error('Fetch error:', error);
         return { success: false, error: error.message };
     }
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export default function BunkerManagementContent() {
+function FlipProcessContent() {
     const router = useRouter();
     const toast = useToast();
     const searchParams = useSearchParams();
@@ -975,69 +934,15 @@ export default function BunkerManagementContent() {
     const [initialBatchNumber, setInitialBatchNumber] = useState(null);
     const [initialBatchId, setInitialBatchId] = useState(null);
     const isSavingRef = useRef(false);
-    const [isSaved, setIsSaved] = useState(false);
-
-    // ── Tunnel state ─────────────────────────────────────────────────────────
-    const [tunnels, setTunnels] = useState([]);
-    const [selectedTunnel, setSelectedTunnel] = useState('');
-    const [tunnelLoading, setTunnelLoading] = useState(false);
-    const [movingToTunnel, setMovingToTunnel] = useState(false);
-
-    // ── Bunker state ─────────────────────────────────────────────────────────
-    const [bunkers, setBunkers] = useState([]);
-    const [bunkerLoading, setBunkerLoading] = useState(false);
-
-    // Fetch inactive tunnels on mount
-    useEffect(() => {
-        const fetchTunnels = async () => {
-            setTunnelLoading(true);
-            try {
-                const res = await fetch(`${API_BASE_URL}/tunnels`);
-                if (!res.ok) throw new Error('Failed to fetch tunnels');
-                const data = await res.json();
-                const inactive = (data.data || []).filter(t => t.is_active === false);
-                setTunnels(inactive);
-            } catch (err) {
-                console.error('Error fetching tunnels:', err);
-            } finally {
-                setTunnelLoading(false);
-            }
-        };
-        fetchTunnels();
-    }, []);
-
-    // Fetch bunkers on mount
-    useEffect(() => {
-        const fetchBunkers = async () => {
-            setBunkerLoading(true);
-            try {
-                const res = await fetch(`${API_BASE_URL}/bunkers`);
-                if (!res.ok) throw new Error('Failed to fetch bunkers');
-                const data = await res.json();
-                // Keep ALL bunkers — inactive ones for the dropdown, active needed for locked badge names
-                setBunkers(data.data || []);
-            } catch (err) {
-                console.error('Error fetching bunkers:', err);
-            } finally {
-                setBunkerLoading(false);
-            }
-        };
-        fetchBunkers();
-    }, []);
 
     useEffect(() => {
         const batchNum = searchParams.get('batch');
         const batchId = searchParams.get('batchId');
-        if (batchNum) {
-            setInitialBatchNumber(batchNum);
-            setInitialBatchId(batchId);
-        }
+        if (batchNum) { setInitialBatchNumber(batchNum); setInitialBatchId(batchId); }
     }, [searchParams]);
 
-    const handleSelectBatch = (batch) => {
-        setCurrentBatch(batch);
-        setIsSaved(false);
-    };
+    const handleSelectBatch = (batch) => setCurrentBatch(batch);
+
     const handleUpdateBatch = useCallback((updatedBatch) => setCurrentBatch(updatedBatch), []);
 
     const validateBatchData = (batch) => {
@@ -1080,34 +985,23 @@ export default function BunkerManagementContent() {
 
             for (const materialType of currentBatch.materialTypes) {
                 const displayName = MATERIAL_DISPLAY_NAMES[materialType];
-                const payload = convertToApiPayload(currentBatch, materialType, false);
+                const payload = convertToApiPayload(currentBatch, materialType, currentBatch.isCompleted);
+                if (!payload) continue;
 
-                if (Object.keys(payload).length > 2) {
-                    const result = await sendToApi(payload, materialType, displayName);
-                    if (result.success) {
-                        successCount++;
-                        toast.success(`${displayName} data saved successfully!`);
-                    } else {
-                        failCount++;
-                        toast.error(`Failed to save ${displayName} data: ${result.error}`);
-                    }
+                const result = await sendToApi(payload, materialType, displayName);
+                if (result.success) {
+                    successCount++;
+                    toast.success(`${displayName} data saved successfully!`);
+                } else {
+                    failCount++;
+                    toast.error(`Failed to save ${displayName} data: ${result.error}`);
                 }
             }
 
             if (successCount > 0 && failCount === 0) {
                 toast.success(`All ${successCount} material(s) saved successfully!`);
-                setCurrentBatch(prev => ({
-                    ...prev,
-                    substages: prev.substages.map(s => ({
-                        ...s,
-                        bunkerLocked: s.bunkerLocked || Boolean(s.bunker)
-                    }))
-                }));
-                setIsSaved(true);
             } else if (failCount > 0) {
                 toast.warning(`${successCount} saved, ${failCount} failed`);
-            } else {
-                toast.info('No data to save');
             }
         } catch (err) {
             toast.error('Failed to save batch data');
@@ -1117,57 +1011,9 @@ export default function BunkerManagementContent() {
         }
     };
 
-    const handleMoveToTunnel = async () => {
-        if (!selectedTunnel) {
-            toast.error('Please select a tunnel first');
-            return;
-        }
-
-        setMovingToTunnel(true);
-        try {
-            let successCount = 0;
-            let failCount = 0;
-
-            for (const materialType of currentBatch.materialTypes) {
-                const displayName = MATERIAL_DISPLAY_NAMES[materialType];
-                const payload = convertToApiPayload(currentBatch, materialType, true);
-                payload.tunnel_id = selectedTunnel;
-
-                const result = await sendToApi(payload, materialType, displayName);
-                if (result.success) {
-                    successCount++;
-                    toast.success(`${displayName} completed and moved to tunnel!`);
-                } else {
-                    failCount++;
-                    toast.error(`Failed to update ${displayName}: ${result.error}`);
-                }
-            }
-
-            if (successCount > 0) {
-                toast.success(`Batch moved to ${tunnels.find(t => t.id === selectedTunnel)?.name || 'tunnel'} successfully!`);
-                setSelectedTunnel('');
-
-                const tunnelsRes = await fetch(`${API_BASE_URL}/tunnels`);
-                if (tunnelsRes.ok) {
-                    const tunnelsData = await tunnelsRes.json();
-                    const inactive = (tunnelsData.data || []).filter(t => t.is_active === false);
-                    setTunnels(inactive);
-                }
-            } else {
-                toast.error('Failed to move batch to tunnel');
-            }
-        } catch (err) {
-            toast.error('Failed to move batch to tunnel');
-            console.error(err);
-        } finally {
-            setMovingToTunnel(false);
-        }
-    };
-
     const handleBackToSelection = () => {
         setCurrentBatch(null);
-        setIsSaved(false);
-        router.push('/bunker-management');
+        router.push('/flip-process');
         setError(null);
         setInitialBatchNumber(null);
         setInitialBatchId(null);
@@ -1175,7 +1021,7 @@ export default function BunkerManagementContent() {
 
     if (!currentBatch) {
         return (
-            <AppLayout title="Bunker Management">
+            <AppLayout title="Flip Process">
                 <div className="unified-platform-container">
                     <BatchSelection
                         onSelectBatch={handleSelectBatch}
@@ -1192,7 +1038,7 @@ export default function BunkerManagementContent() {
     const materialsDisplay = currentBatch.materialDisplayNames?.join(' + ') || 'Unknown';
 
     return (
-        <AppLayout title="Bunker Management">
+        <AppLayout title="Flip Process">
             <div className="unified-platform-container">
                 <div className="entry-header">
                     <div className="header-left">
@@ -1202,63 +1048,7 @@ export default function BunkerManagementContent() {
                         <h2>{currentBatch.batchNumber}</h2>
                         <span className="material-count">({materialsDisplay})</span>
                     </div>
-
-                    <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-
-                        {/* ── Tunnel dropdown ── */}
-                        <select
-                            value={selectedTunnel}
-                            onChange={e => setSelectedTunnel(e.target.value)}
-                            disabled={tunnelLoading || tunnels.length === 0}
-                            style={{
-                                padding: '6px 12px',
-                                borderRadius: '6px',
-                                border: '1px solid #cbd5e0',
-                                fontSize: '13px',
-                                color: selectedTunnel ? '#1a202c' : '#718096',
-                                background: '#fff',
-                                cursor: tunnels.length === 0 ? 'not-allowed' : 'pointer',
-                                minWidth: '150px',
-                                outline: 'none',
-                                height: '36px',
-                            }}
-                        >
-                            <option value="">
-                                {tunnelLoading ? 'Loading tunnels...' : tunnels.length === 0 ? 'No tunnels available' : 'Select Tunnel'}
-                            </option>
-                            {tunnels.map(tunnel => (
-                                <option key={tunnel.id} value={tunnel.id}>
-                                    {tunnel.name}
-                                </option>
-                            ))}
-                        </select>
-
-                        {/* ── Move to Tunnel button ── */}
-                        <button
-                            onClick={handleMoveToTunnel}
-                            disabled={movingToTunnel || tunnelLoading}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '6px 14px',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: selectedTunnel ? '#2b6cb0' : '#a0aec0',
-                                color: '#fff',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                cursor: movingToTunnel ? 'wait' : 'pointer',
-                                height: '36px',
-                                transition: 'background 0.15s',
-                                whiteSpace: 'nowrap',
-                            }}
-                        >
-                            <ArrowForwardIcon style={{ fontSize: '16px' }} />
-                            {movingToTunnel ? 'Moving...' : 'Move to Tunnel'}
-                        </button>
-
-                        {/* ── Save button ── */}
+                    <div className="header-actions">
                         <button onClick={handleSave} className="btn-save" disabled={loading}>
                             <SaveIcon fontSize="small" />
                             {loading ? 'Saving...' : 'Save'}
@@ -1266,14 +1056,20 @@ export default function BunkerManagementContent() {
                     </div>
                 </div>
 
-                <BunkerTable
+                <FlipTable
                     batch={currentBatch}
                     onUpdate={handleUpdateBatch}
-                    readOnly={isSaved}
-                    bunkers={bunkers}
-                    bunkerLoading={bunkerLoading}
+                    readOnly={false}
                 />
             </div>
         </AppLayout>
+    );
+}
+
+export default function Page() {
+    return (
+        <ToastProvider>
+            <FlipProcessContent />
+        </ToastProvider>
     );
 }

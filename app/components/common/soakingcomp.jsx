@@ -25,14 +25,20 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const API_ENDPOINT = `${API_BASE_URL}/straw-preparation-log`;
 const API_FETCH_ENDPOINT = `${API_BASE_URL}/straw-preparation-log/straws`;
 const BATCH_UPDATE_ENDPOINT = `${API_BASE_URL}/batches`;
+const BUNKERS_ENDPOINT = `${API_BASE_URL}/bunkers`;
 
+// ✅ UPDATED: Correct stage names matching the API payload
 const STAGE_NAMES = [
     "Soaking",
     "Soaking Rest",
+    "Shifting",
+    "Shifting Rest",
     "Re Soaking 1",
     "Re Soaking 1 Rest",
     "Re Soaking 2",
-    "Re Soaking 2 Rest"
+    "Re Soaking 2 Rest",
+    "Shifting 2",
+    "Shifting 2 Rest",
 ];
 
 const PLAIN_BUNKER_STAGE = "Plain Bunker";
@@ -147,6 +153,23 @@ const fetchBatchData = async (batchId) => {
     }
 };
 
+const fetchBunkers = async () => {
+    try {
+        const response = await fetch(BUNKERS_ENDPOINT);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch bunkers: ${response.status}`);
+        }
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+            return { success: true, data: result.data };
+        }
+        return { success: true, data: [] };
+    } catch (error) {
+        console.error('Error fetching bunkers:', error);
+        return { success: false, error: error.message, data: [] };
+    }
+};
+
 const combineDateTime = (date, time) => {
     if (!date || !time) return null;
     try {
@@ -198,26 +221,14 @@ const hasCompleteMaterialData = (material, includePlainBunker = false) => {
     }
 
     for (const substage of material.substages) {
-        if (substage.startDate && !substage.startTime) {
-            return false;
-        }
-
-        if (substage.startTime && !substage.startDate) {
-            return false;
-        }
-
-        if (substage.endDate && !substage.endTime) {
-            return false;
-        }
-
-        if (substage.endTime && !substage.endDate) {
-            return false;
-        }
+        if (substage.startDate && !substage.startTime) return false;
+        if (substage.startTime && !substage.startDate) return false;
+        if (substage.endDate && !substage.endTime) return false;
+        if (substage.endTime && !substage.endDate) return false;
     }
 
     if (includePlainBunker && material.plainBunkerSubstage) {
         const pb = material.plainBunkerSubstage;
-
         const hasPbData = pb.startDate || pb.startTime || pb.endDate || pb.endTime || pb.remarks;
 
         if (hasPbData) {
@@ -246,7 +257,6 @@ const validatePlainBunkerData = (material) => {
     if (hasPbData) {
         if (pb.startDate && !pb.startTime) return false;
         if (pb.startTime && !pb.startDate) return false;
-
         if (pb.endDate && !pb.endTime) return false;
         if (pb.endTime && !pb.endDate) return false;
 
@@ -260,16 +270,20 @@ const validatePlainBunkerData = (material) => {
     return true;
 };
 
-const convertToApiPayload = (batch, material, isCompleted) => {
+// ✅ UPDATED: Correct payload mapping matching actual API field names
+// Stage index mapping:
+// 0 = Soaking         → soaking
+// 1 = Soaking Rest    → soaking_rest
+// 2 = Shifting        → shifting
+// 3 = Shifting Rest   → shifting_rest
+// 4 = Re Soaking 1    → resoaking_one
+// 5 = Re Soaking 1 Rest → resoaking_rest
+// 6 = Re Soaking 2    → resoaking_two
+// 7 = Re Soaking 2 Rest → resoaking_two_rest
+// 8 = Shifting 2      → shifting_2
+// 9 = Shifting 2 Rest → shifting_2_rest
+const convertToApiPayload = (batch, material, isCompleted, selectedBunkerId = null) => {
     if (!material) return null;
-
-    const soaking = material.substages[0] || createEmptySubstage("Soaking");
-    const soakingRest = material.substages[1] || createEmptySubstage("Soaking Rest");
-    const resoakingOne = material.substages[2] || createEmptySubstage("Re Soaking 1");
-    const resoakingRest = material.substages[3] || createEmptySubstage("Re Soaking 1 Rest");
-    const resoakingTwo = material.substages[4] || createEmptySubstage("Re Soaking 2");
-    const resoakingTwoRest = material.substages[5] || createEmptySubstage("Re Soaking 2 Rest");
-    const plainBunker = material.plainBunkerSubstage || createEmptySubstage("Plain Bunker");
 
     const formatDateTime = (dateTimeStr) => {
         if (!dateTimeStr) return null;
@@ -291,48 +305,25 @@ const convertToApiPayload = (batch, material, isCompleted) => {
         }
     };
 
-    const soaking_start = (soaking.startDate && soaking.startTime)
-        ? combineDateTime(soaking.startDate, soaking.startTime)
-        : null;
-    const soaking_end = (soaking.endDate && soaking.endTime)
-        ? combineDateTime(soaking.endDate, soaking.endTime)
-        : null;
+    const getSubstageDateTime = (index, field) => {
+        const substage = material.substages[index];
+        if (!substage) return null;
+        if (field === 'start') {
+            return (substage.startDate && substage.startTime)
+                ? combineDateTime(substage.startDate, substage.startTime)
+                : null;
+        }
+        return (substage.endDate && substage.endTime)
+            ? combineDateTime(substage.endDate, substage.endTime)
+            : null;
+    };
 
-    const soaking_rest_start = (soakingRest.startDate && soakingRest.startTime)
-        ? combineDateTime(soakingRest.startDate, soakingRest.startTime)
-        : null;
-    const soaking_rest_end = (soakingRest.endDate && soakingRest.endTime)
-        ? combineDateTime(soakingRest.endDate, soakingRest.endTime)
-        : null;
+    const getSubstageRemarks = (index) => {
+        const substage = material.substages[index];
+        return substage?.remarks || null;
+    };
 
-    const resoaking_one_start = (resoakingOne.startDate && resoakingOne.startTime)
-        ? combineDateTime(resoakingOne.startDate, resoakingOne.startTime)
-        : null;
-    const resoaking_one_end = (resoakingOne.endDate && resoakingOne.endTime)
-        ? combineDateTime(resoakingOne.endDate, resoakingOne.endTime)
-        : null;
-
-    const resoaking_rest_start = (resoakingRest.startDate && resoakingRest.startTime)
-        ? combineDateTime(resoakingRest.startDate, resoakingRest.startTime)
-        : null;
-    const resoaking_rest_end = (resoakingRest.endDate && resoakingRest.endTime)
-        ? combineDateTime(resoakingRest.endDate, resoakingRest.endTime)
-        : null;
-
-    const resoaking_two_start = (resoakingTwo.startDate && resoakingTwo.startTime)
-        ? combineDateTime(resoakingTwo.startDate, resoakingTwo.startTime)
-        : null;
-    const resoaking_two_end = (resoakingTwo.endDate && resoakingTwo.endTime)
-        ? combineDateTime(resoakingTwo.endDate, resoakingTwo.endTime)
-        : null;
-
-    const resoaking_two_rest_start = (resoakingTwoRest.startDate && resoakingTwoRest.startTime)
-        ? combineDateTime(resoakingTwoRest.startDate, resoakingTwoRest.startTime)
-        : null;
-    const resoaking_two_rest_end = (resoakingTwoRest.endDate && resoakingTwoRest.endTime)
-        ? combineDateTime(resoakingTwoRest.endDate, resoakingTwoRest.endTime)
-        : null;
-
+    const plainBunker = material.plainBunkerSubstage || createEmptySubstage("Plain Bunker");
     const plain_bunker_start = (plainBunker.startDate && plainBunker.startTime)
         ? combineDateTime(plainBunker.startDate, plainBunker.startTime)
         : null;
@@ -340,99 +331,128 @@ const convertToApiPayload = (batch, material, isCompleted) => {
         ? combineDateTime(plainBunker.endDate, plainBunker.endTime)
         : null;
 
-    const apiStrawType = material.type;
+    // Determine overall end_time: last filled stage end or plain bunker end
+    const lastStageEnd = getSubstageDateTime(9, 'end') || getSubstageDateTime(8, 'end') ||
+        getSubstageDateTime(7, 'end') || getSubstageDateTime(6, 'end') ||
+        getSubstageDateTime(5, 'end') || getSubstageDateTime(4, 'end') ||
+        getSubstageDateTime(3, 'end') || getSubstageDateTime(2, 'end') ||
+        getSubstageDateTime(1, 'end') || getSubstageDateTime(0, 'end');
+
+    const overallEndTime = plain_bunker_end || lastStageEnd;
+
+    const buildStageObject = (startDT, endDT, remarks) => {
+        const obj = {};
+        if (startDT) obj.start_time = formatDateTime(startDT);
+        if (endDT) obj.end_time = formatDateTime(endDT);
+        if (remarks) obj.remarks = remarks;
+        return Object.keys(obj).length > 0 ? obj : null;
+    };
 
     const payload = {
         batch_id: batch.id,
-        straw_type: apiStrawType,
-        start_time: formatDateTime(soaking_start),
-        end_time: formatDateTime(resoaking_two_rest_end || plain_bunker_end),
-        iscompleted: isCompleted,
-        soaking: {
-            start_time: formatDateTime(soaking_start),
-            end_time: formatDateTime(soaking_end)
-        },
-        soaking_rest: {
-            start_time: formatDateTime(soaking_rest_start),
-            end_time: formatDateTime(soaking_rest_end)
-        },
-        resoaking_one: {
-            start_time: formatDateTime(resoaking_one_start),
-            end_time: formatDateTime(resoaking_one_end)
-        },
-        resoaking_rest: {
-            start_time: formatDateTime(resoaking_rest_start),
-            end_time: formatDateTime(resoaking_rest_end)
-        },
-        resoaking_two: {
-            start_time: formatDateTime(resoaking_two_start),
-            end_time: formatDateTime(resoaking_two_end)
-        },
-        resoaking_two_rest: {
-            start_time: formatDateTime(resoaking_two_rest_start),
-            end_time: formatDateTime(resoaking_two_rest_end)
-        },
-        plain_bunker: {
-            start_time: formatDateTime(plain_bunker_start),
-            end_time: formatDateTime(plain_bunker_end)
-        }
+        straw_type: material.type,
+        start_time: formatDateTime(getSubstageDateTime(0, 'start')),
+        end_time: formatDateTime(overallEndTime),
     };
 
-    Object.keys(payload).forEach(key => {
-        if (payload[key] === null) {
-            delete payload[key];
-        } else if (typeof payload[key] === 'object' && payload[key] !== null && key !== 'batch_id' && key !== 'straw_type' && key !== 'iscompleted') {
-            let hasValidField = false;
-            Object.keys(payload[key]).forEach(subKey => {
-                if (payload[key][subKey] === null) {
-                    delete payload[key][subKey];
-                } else {
-                    hasValidField = true;
-                }
-            });
+    // soaking (index 0)
+    const soakingObj = buildStageObject(getSubstageDateTime(0, 'start'), getSubstageDateTime(0, 'end'), getSubstageRemarks(0));
+    if (soakingObj) payload.soaking = soakingObj;
 
-            if (!hasValidField) {
-                delete payload[key];
-            }
+    // soaking_rest (index 1)
+    const soakingRestObj = buildStageObject(getSubstageDateTime(1, 'start'), getSubstageDateTime(1, 'end'), getSubstageRemarks(1));
+    if (soakingRestObj) payload.soaking_rest = soakingRestObj;
+
+    // shifting (index 2)
+    const shiftingObj = buildStageObject(getSubstageDateTime(2, 'start'), getSubstageDateTime(2, 'end'), getSubstageRemarks(2));
+    if (shiftingObj) payload.shifting = shiftingObj;
+
+    // shifting_rest (index 3)
+    const shiftingRestObj = buildStageObject(getSubstageDateTime(3, 'start'), getSubstageDateTime(3, 'end'), getSubstageRemarks(3));
+    if (shiftingRestObj) payload.shifting_rest = shiftingRestObj;
+
+    // resoaking_one (index 4)
+    const resoakingOneObj = buildStageObject(getSubstageDateTime(4, 'start'), getSubstageDateTime(4, 'end'), getSubstageRemarks(4));
+    if (resoakingOneObj) payload.resoaking_one = resoakingOneObj;
+
+    // resoaking_rest (index 5)
+    const resoakingRestObj = buildStageObject(getSubstageDateTime(5, 'start'), getSubstageDateTime(5, 'end'), getSubstageRemarks(5));
+    if (resoakingRestObj) payload.resoaking_rest = resoakingRestObj;
+
+    // resoaking_two (index 6)
+    const resoakingTwoObj = buildStageObject(getSubstageDateTime(6, 'start'), getSubstageDateTime(6, 'end'), getSubstageRemarks(6));
+    if (resoakingTwoObj) payload.resoaking_two = resoakingTwoObj;
+
+    // resoaking_two_rest (index 7)
+    const resoakingTwoRestObj = buildStageObject(getSubstageDateTime(7, 'start'), getSubstageDateTime(7, 'end'), getSubstageRemarks(7));
+    if (resoakingTwoRestObj) payload.resoaking_two_rest = resoakingTwoRestObj;
+
+    // shifting_2 (index 8)
+    const shifting2Obj = buildStageObject(getSubstageDateTime(8, 'start'), getSubstageDateTime(8, 'end'), getSubstageRemarks(8));
+    if (shifting2Obj) payload.shifting_2 = shifting2Obj;
+
+    // shifting_2_rest (index 9)
+    const shifting2RestObj = buildStageObject(getSubstageDateTime(9, 'start'), getSubstageDateTime(9, 'end'), getSubstageRemarks(9));
+    if (shifting2RestObj) payload.shifting_2_rest = shifting2RestObj;
+
+    // plain_bunker
+    const plainBunkerObj = buildStageObject(plain_bunker_start, plain_bunker_end, plainBunker.remarks || null);
+    if (plainBunkerObj) payload.plain_bunker = plainBunkerObj;
+
+    // Only add iscompleted if true
+    if (isCompleted) {
+        payload.iscompleted = true;
+    }
+
+    // Add bunker_id only on move
+    if (selectedBunkerId) {
+        payload.bunker_id = selectedBunkerId;
+    }
+
+    // Remove null top-level fields
+    Object.keys(payload).forEach(key => {
+        if (payload[key] === null || payload[key] === undefined) {
+            delete payload[key];
         }
     });
 
     return payload;
 };
 
+// ✅ UPDATED: Correct API response → UI mapping
 const convertApiResponseToUI = (apiData, batch) => {
     if (!apiData || !Array.isArray(apiData)) {
         return batch;
     }
-
 
     batch.materials.forEach(material => {
         const materialData = apiData.find(d =>
             d.straw_type && d.straw_type === material.type
         );
 
-        if (!materialData) {
-            return;
-        }
-
+        if (!materialData) return;
 
         if (materialData.id) {
             material.recordId = materialData.id;
             material.hasExistingData = true;
         }
 
+        // ✅ UPDATED: Correct mapping matching STAGE_NAMES order and API fields
         const substageMapping = [
-            { name: "Soaking", data: materialData.soaking },
-            { name: "Soaking Rest", data: materialData.soaking_rest },
-            { name: "Re Soaking 1", data: materialData.resoaking_one },
-            { name: "Re Soaking 1 Rest", data: materialData.resoaking_rest },
-            { name: "Re Soaking 2", data: materialData.resoaking_two },
-            { name: "Re Soaking 2 Rest", data: materialData.resoaking_two_rest }
+            { name: "Soaking",           data: materialData.soaking },           // index 0
+            { name: "Soaking Rest",      data: materialData.soaking_rest },      // index 1
+            { name: "Shifting",          data: materialData.shifting },           // index 2
+            { name: "Shifting Rest",     data: materialData.shifting_rest },     // index 3
+            { name: "Re Soaking 1",      data: materialData.resoaking_one },     // index 4
+            { name: "Re Soaking 1 Rest", data: materialData.resoaking_rest },    // index 5
+            { name: "Re Soaking 2",      data: materialData.resoaking_two },     // index 6
+            { name: "Re Soaking 2 Rest", data: materialData.resoaking_two_rest },// index 7
+            { name: "Shifting 2",        data: materialData.shifting_2 },        // index 8
+            { name: "Shifting 2 Rest",   data: materialData.shifting_2_rest },   // index 9
         ];
 
         substageMapping.forEach((mapping, index) => {
             if (mapping.data) {
-
                 if (mapping.data.start_time) {
                     const { date: startDate, time: startTime } = parseDateTime(mapping.data.start_time);
                     material.substages[index].startDate = startDate;
@@ -452,7 +472,6 @@ const convertApiResponseToUI = (apiData, batch) => {
                 if (mapping.data.remarks) {
                     material.substages[index].remarks = mapping.data.remarks;
                 }
-            } else {
             }
         });
 
@@ -486,7 +505,6 @@ const convertApiResponseToUI = (apiData, batch) => {
 
 const sendToApi = async (payload, materialType, displayName) => {
     try {
-
         const response = await fetch(API_ENDPOINT, {
             method: 'PUT',
             headers: {
@@ -495,10 +513,9 @@ const sendToApi = async (payload, materialType, displayName) => {
             body: JSON.stringify(payload)
         });
 
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-            console.error(' API Error Response:', errorData);
+            console.error('API Error Response:', errorData);
 
             let errorMessage = `API error: ${response.status}`;
             if (errorData.detail) {
@@ -517,7 +534,7 @@ const sendToApi = async (payload, materialType, displayName) => {
         const result = await response.json();
         return { success: true, data: result, materialType, displayName };
     } catch (error) {
-        console.error(` ERROR sending ${displayName} data:`, error);
+        console.error(`ERROR sending ${displayName} data:`, error);
         return { success: false, error: error.message, materialType, displayName };
     }
 };
@@ -536,17 +553,16 @@ const updateBatchPlainBunkerStatus = async (batchId, status) => {
             })
         });
 
-
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-            console.error(' API Error Response:', errorData);
+            console.error('API Error Response:', errorData);
             throw new Error(`Failed to update batch status: ${response.status}`);
         }
 
         const result = await response.json();
         return { success: true, data: result };
     } catch (error) {
-        console.error(' Error updating batch status:', error);
+        console.error('Error updating batch status:', error);
         return { success: false, error: error.message };
     }
 };
@@ -554,7 +570,7 @@ const updateBatchPlainBunkerStatus = async (batchId, status) => {
 const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false, readOnly = false }) => {
     const toast = useToast();
 
-    const validateDateRange = (substage, field, newValue, currentSubstage, isPlainBunker = false) => {
+    const validateDateRange = (substage, field, newValue) => {
         if (field === 'startDate' || field === 'startTime') {
             if (substage.endDate && substage.endTime) {
                 const newStartDateTime = field === 'startDate'
@@ -583,15 +599,12 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
         return true;
     };
 
-    const validateStageSequence = (index, field, value, updatedMaterial, isPlainBunker = false) => {
-        if (isPlainBunker) return true;
-
+    const validateStageSequence = (index, field, value, updatedMaterial) => {
         const substage = updatedMaterial.substages[index];
         const tempSubstage = { ...substage, [field]: value };
-        const stageIndex = index;
 
-        if (stageIndex > 0) {
-            const prevStage = updatedMaterial.substages[stageIndex - 1];
+        if (index > 0) {
+            const prevStage = updatedMaterial.substages[index - 1];
             if (prevStage.endDate && prevStage.endTime && tempSubstage.startDate && tempSubstage.startTime) {
                 const prevEnd = combineDateTime(prevStage.endDate, prevStage.endTime);
                 const currentStart = combineDateTime(tempSubstage.startDate, tempSubstage.startTime);
@@ -603,8 +616,8 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
             }
         }
 
-        if (stageIndex < updatedMaterial.substages.length - 1) {
-            const nextStage = updatedMaterial.substages[stageIndex + 1];
+        if (index < updatedMaterial.substages.length - 1) {
+            const nextStage = updatedMaterial.substages[index + 1];
             if (tempSubstage.endDate && tempSubstage.endTime && nextStage.startDate && nextStage.startTime) {
                 const currentEnd = combineDateTime(tempSubstage.endDate, tempSubstage.endTime);
                 const nextStart = combineDateTime(nextStage.startDate, nextStage.startTime);
@@ -619,15 +632,10 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
         return true;
     };
 
-    const getMinEndDate = (substage) => {
-        if (substage.startDate) {
-            return substage.startDate;
-        }
-        return undefined;
-    };
+    const getMinEndDate = (substage) => substage?.startDate || undefined;
 
     const getMinEndTime = (substage) => {
-        if (substage.startDate === substage.endDate && substage.startTime) {
+        if (substage?.startDate === substage?.endDate && substage?.startTime) {
             return substage.startTime;
         }
         return undefined;
@@ -641,53 +649,41 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
         if (isPlainBunker) {
             const substage = updatedMaterial.plainBunkerSubstage;
 
-            if (field === 'startDate' || field === 'startTime' || field === 'endDate' || field === 'endTime') {
-                if (!validateDateRange(substage, field, value, substage, true)) {
-                    return;
-                }
+            if (['startDate', 'startTime', 'endDate', 'endTime'].includes(field)) {
+                if (!validateDateRange(substage, field, value)) return;
             }
 
             substage[field] = value;
 
             if (substage.startDate && substage.startTime && substage.endDate && substage.endTime) {
-                const startDateTime = new Date(`${substage.startDate}T${substage.startTime}`);
-                const endDateTime = new Date(`${substage.endDate}T${substage.endTime}`);
-                const diffHours = (endDateTime - startDateTime) / (1000 * 60 * 60);
-                substage.totalHours = diffHours.toFixed(1);
+                const start = new Date(`${substage.startDate}T${substage.startTime}`);
+                const end = new Date(`${substage.endDate}T${substage.endTime}`);
+                substage.totalHours = ((end - start) / (1000 * 60 * 60)).toFixed(1);
             }
         } else {
             const substage = updatedMaterial.substages[index];
 
-            if (field === 'startDate' || field === 'startTime' || field === 'endDate' || field === 'endTime') {
-                if (!validateDateRange(substage, field, value, substage)) {
-                    return;
-                }
+            if (['startDate', 'startTime', 'endDate', 'endTime'].includes(field)) {
+                if (!validateDateRange(substage, field, value)) return;
             }
 
             substage[field] = value;
 
-            if (!validateStageSequence(index, field, value, updatedMaterial)) {
-                return;
-            }
+            if (!validateStageSequence(index, field, value, updatedMaterial)) return;
 
             if (substage.startDate && substage.startTime && substage.endDate && substage.endTime) {
-                const startDateTime = new Date(`${substage.startDate}T${substage.startTime}`);
-                const endDateTime = new Date(`${substage.endDate}T${substage.endTime}`);
-                const diffHours = (endDateTime - startDateTime) / (1000 * 60 * 60);
-                substage.totalHours = diffHours.toFixed(1);
+                const start = new Date(`${substage.startDate}T${substage.startTime}`);
+                const end = new Date(`${substage.endDate}T${substage.endTime}`);
+                substage.totalHours = ((end - start) / (1000 * 60 * 60)).toFixed(1);
             }
         }
 
         onUpdate(updatedMaterial);
     };
 
-    const getTableTitle = () => {
-        return `${material.displayName} Soaking Process`;
-    };
-
     return (
         <div className="table-section">
-            <h3 className="table-title">{getTableTitle()}</h3>
+            <h3 className="table-title">{material.displayName} Soaking Process</h3>
             <div className="entry-table-container">
                 <table className="entry-table">
                     <thead>
@@ -706,6 +702,7 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
                         </tr>
                     </thead>
                     <tbody>
+                        {/* ✅ All 10 substage rows rendered from STAGE_NAMES */}
                         {material.substages.map((substage, index) => (
                             <tr key={index}>
                                 <td className="substage-name">{substage.name}</td>
@@ -770,6 +767,8 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
                                 </td>
                             </tr>
                         ))}
+
+                        {/* ✅ Plain Bunker row — shown when "Mix Two Materials" = No */}
                         {showPlainBunker && (
                             <tr className="plain-bunker-row">
                                 <td className="substage-name plain-bunker">Plain Bunker</td>
@@ -790,7 +789,8 @@ const MaterialTable = React.memo(({ material, onUpdate, showPlainBunker = false,
                                         onChange={(e) => handleInputChange(null, 'startTime', e.target.value, true)}
                                         className="table-input"
                                         disabled={readOnly}
-                                        max={material.plainBunkerSubstage?.startDate === material.plainBunkerSubstage?.endDate ? material.plainBunkerSubstage?.endTime : undefined}
+                                        max={material.plainBunkerSubstage?.startDate === material.plainBunkerSubstage?.endDate
+                                            ? material.plainBunkerSubstage?.endTime : undefined}
                                     />
                                 </td>
                                 <td>
@@ -848,7 +848,6 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
     const [isLoading, setIsLoading] = useState(false);
     const toast = useToast();
     const router = useRouter();
-    const searchParams = useSearchParams();
     const hasLoadedRef = useRef(false);
 
     useEffect(() => {
@@ -883,47 +882,17 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
         setIsLoading(true);
 
         try {
-
             let selectedBatch = null;
-            let batchIdToUse = batchId;
+            const batchResponse = await fetch(`${API_BASE_URL}/batches`);
 
-            if (batchIdToUse) {
-                const batchResponse = await fetch(`${API_BASE_URL}/batches`);
+            if (!batchResponse.ok) throw new Error('Failed to fetch batches');
 
-                if (!batchResponse.ok) {
-                    throw new Error('Failed to fetch batches');
-                }
+            const batchResult = await batchResponse.json();
+            let batches = Array.isArray(batchResult) ? batchResult : (batchResult.success ? batchResult.data : []);
 
-                const batchResult = await batchResponse.json();
-
-                let batches = [];
-                if (Array.isArray(batchResult)) {
-                    batches = batchResult;
-                } else if (batchResult.success) {
-                    batches = batchResult.data;
-                }
-
-                selectedBatch = batches.find(b => b.id === batchIdToUse);
-
-                if (!selectedBatch) {
-                    selectedBatch = batches.find(b => b.batch_number === batchNum.trim());
-                }
+            if (batchId) {
+                selectedBatch = batches.find(b => b.id === batchId) || batches.find(b => b.batch_number === batchNum.trim());
             } else {
-                const batchResponse = await fetch(`${API_BASE_URL}/batches`);
-
-                if (!batchResponse.ok) {
-                    throw new Error('Failed to fetch batches');
-                }
-
-                const batchResult = await batchResponse.json();
-
-                let batches = [];
-                if (Array.isArray(batchResult)) {
-                    batches = batchResult;
-                } else if (batchResult.success) {
-                    batches = batchResult.data;
-                }
-
                 selectedBatch = batches.find(b => b.batch_number === batchNum.trim());
             }
 
@@ -933,7 +902,6 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
                 return;
             }
 
-
             const materials = getMaterialsFromBatch(selectedBatch);
 
             if (materials.length === 0) {
@@ -941,7 +909,6 @@ function BatchSelection({ onSelectBatch, loading, error, initialBatchNumber, ini
                 setIsLoading(false);
                 return;
             }
-
 
             const newBatch = createEmptyBatch(batchNum, materials, selectedBatch.id);
             newBatch.batchData = selectedBatch;
@@ -1024,6 +991,11 @@ export default function SoakingContent() {
     const [error, setError] = useState(null);
     const [initialBatchNumber, setInitialBatchNumber] = useState(null);
     const [initialBatchId, setInitialBatchId] = useState(null);
+
+    const [bunkers, setBunkers] = useState([]);
+    const [bunkersLoading, setBunkersLoading] = useState(false);
+    const [selectedBunkerId, setSelectedBunkerId] = useState('');
+
     const isSavingRef = useRef(false);
 
     useEffect(() => {
@@ -1036,8 +1008,26 @@ export default function SoakingContent() {
         }
     }, [searchParams]);
 
+    useEffect(() => {
+        if (currentBatch) {
+            loadBunkers();
+        }
+    }, [currentBatch?.id]);
+
+    const loadBunkers = async () => {
+        setBunkersLoading(true);
+        const result = await fetchBunkers();
+        if (result.success) {
+            setBunkers(result.data);
+        } else {
+            toast.error('Failed to load bunkers');
+        }
+        setBunkersLoading(false);
+    };
+
     const handleSelectBatch = (batch) => {
         setCurrentBatch(batch);
+        setSelectedBunkerId('');
     };
 
     const handleUpdateMaterial = useCallback((index, updatedMaterial) => {
@@ -1045,10 +1035,7 @@ export default function SoakingContent() {
             if (!prevBatch) return prevBatch;
             const updatedMaterials = [...prevBatch.materials];
             updatedMaterials[index] = updatedMaterial;
-            return {
-                ...prevBatch,
-                materials: updatedMaterials
-            };
+            return { ...prevBatch, materials: updatedMaterials };
         });
     }, []);
 
@@ -1082,9 +1069,7 @@ export default function SoakingContent() {
                 }
             }
 
-            if (!validateStageSequencing(material, toast)) {
-                return false;
-            }
+            if (!validateStageSequencing(material, toast)) return false;
 
             if (includePlainBunker && material.plainBunkerSubstage) {
                 const pb = material.plainBunkerSubstage;
@@ -1119,7 +1104,7 @@ export default function SoakingContent() {
                 const pb = material.plainBunkerSubstage;
 
                 if (!pb.startDate) {
-                    toast.error(`${material.displayName}: Plain Bunker row is required when selecting "No"`);
+                    toast.error(`${material.displayName}: Plain Bunker start date is required when selecting "No"`);
                     return false;
                 }
                 if (!pb.startTime) {
@@ -1160,10 +1145,10 @@ export default function SoakingContent() {
 
             for (let i = 0; i < currentBatch.materials.length; i++) {
                 const material = currentBatch.materials[i];
-
                 const includePlainBunker = currentBatch.moveToPlainBunker === false;
+
                 if (hasCompleteMaterialData(material, includePlainBunker)) {
-                    const payload = convertToApiPayload(currentBatch, material, false);
+                    const payload = convertToApiPayload(currentBatch, material, false, null);
                     if (payload) {
                         hasAnyDataToSave = true;
 
@@ -1172,7 +1157,7 @@ export default function SoakingContent() {
 
                         if (result.success) {
                             successCount++;
-                            if (result.data && result.data.data && result.data.data.id) {
+                            if (result.data?.data?.id) {
                                 setCurrentBatch(prevBatch => {
                                     const updatedMaterials = [...prevBatch.materials];
                                     updatedMaterials[i] = {
@@ -1180,10 +1165,7 @@ export default function SoakingContent() {
                                         recordId: result.data.data.id,
                                         hasExistingData: true
                                     };
-                                    return {
-                                        ...prevBatch,
-                                        materials: updatedMaterials
-                                    };
+                                    return { ...prevBatch, materials: updatedMaterials };
                                 });
                             }
                             toast.success(`${material.displayName} data saved successfully!`);
@@ -1192,19 +1174,15 @@ export default function SoakingContent() {
                             toast.error(`Failed to save ${material.displayName} data: ${result.error}`);
                         }
                     }
-                } else {
                 }
             }
 
             if (!hasAnyDataToSave) {
                 toast.info('No complete data to save. Please fill in all required fields for at least one material.');
-                setLoading(false);
-                isSavingRef.current = false;
                 return;
             }
 
             const existingIndex = savedBatches.findIndex(b => b.id === currentBatch.id);
-
             if (existingIndex >= 0) {
                 const updated = [...savedBatches];
                 updated[existingIndex] = { ...currentBatch, status: 'draft' };
@@ -1213,25 +1191,27 @@ export default function SoakingContent() {
                 setSavedBatches([...savedBatches, { ...currentBatch, status: 'draft' }]);
             }
 
-            const allSuccess = results.every(r => r.success);
-            if (allSuccess) {
+            if (results.every(r => r.success)) {
                 toast.success(`All ${successCount} material data saved successfully!`);
             } else {
                 toast.warning(`${successCount} material(s) saved successfully, ${failCount} failed`);
             }
         } catch (error) {
             toast.error('Failed to save batch data');
-            console.error(' Save error:', error);
+            console.error('Save error:', error);
         } finally {
             setLoading(false);
-            setTimeout(() => {
-                isSavingRef.current = false;
-            }, 1000);
+            setTimeout(() => { isSavingRef.current = false; }, 1000);
         }
     };
 
     const handleMoveToPlainBunker = async () => {
         if (!currentBatch || isSavingRef.current) return;
+
+        if (!selectedBunkerId) {
+            toast.error('Please select a bunker before moving to Plain Bunker');
+            return;
+        }
 
         const hasData = currentBatch.materials.some(material =>
             material.substages.some(hasSubstageData)
@@ -1242,22 +1222,18 @@ export default function SoakingContent() {
             return;
         }
 
-        if (!validateMoveToPlainBunker(currentBatch)) {
-            return;
-        }
+        if (!validateMoveToPlainBunker(currentBatch)) return;
 
         isSavingRef.current = true;
         setLoading(true);
 
         try {
-            const results = [];
             let hasAnyDataToSave = false;
             let successCount = 0;
             let failCount = 0;
 
             for (let i = 0; i < currentBatch.materials.length; i++) {
                 const material = currentBatch.materials[i];
-
                 const includePlainBunker = currentBatch.moveToPlainBunker === false;
 
                 if (currentBatch.moveToPlainBunker === false) {
@@ -1271,16 +1247,15 @@ export default function SoakingContent() {
                 }
 
                 if (hasCompleteMaterialData(material, includePlainBunker)) {
-                    const payload = convertToApiPayload(currentBatch, material, true);
+                    const payload = convertToApiPayload(currentBatch, material, true, selectedBunkerId);
                     if (payload) {
                         hasAnyDataToSave = true;
 
                         const result = await sendToApi(payload, material.type, material.displayName);
-                        results.push({ ...result, materialIndex: i, materialType: material.type });
 
                         if (result.success) {
                             successCount++;
-                            if (result.data && result.data.data && result.data.data.id) {
+                            if (result.data?.data?.id) {
                                 setCurrentBatch(prevBatch => {
                                     const updatedMaterials = [...prevBatch.materials];
                                     updatedMaterials[i] = {
@@ -1288,32 +1263,23 @@ export default function SoakingContent() {
                                         recordId: result.data.data.id,
                                         hasExistingData: true
                                     };
-                                    return {
-                                        ...prevBatch,
-                                        materials: updatedMaterials
-                                    };
+                                    return { ...prevBatch, materials: updatedMaterials };
                                 });
                             }
                         } else {
                             failCount++;
                         }
                     }
-                } else {
-                    console.log(` ${material.displayName} has incomplete data, skipping`);
                 }
             }
 
             if (!hasAnyDataToSave) {
                 toast.info('No complete data to save. Please fill in all required fields for at least one material.');
-                setLoading(false);
-                isSavingRef.current = false;
                 return;
             }
 
             if (failCount > 0) {
                 toast.error(`Failed to save ${failCount} material(s). Cannot proceed to Plain Bunker.`);
-                setLoading(false);
-                isSavingRef.current = false;
                 return;
             }
 
@@ -1324,7 +1290,6 @@ export default function SoakingContent() {
 
             if (batchUpdateResult.success) {
                 toast.success(`Batch moved to Plain Bunker successfully with status: ${currentBatch.moveToPlainBunker ? 'Yes' : 'No'}`);
-
                 setCurrentBatch(null);
                 router.push('/unified-platform');
             } else {
@@ -1333,17 +1298,17 @@ export default function SoakingContent() {
 
         } catch (error) {
             toast.error('Failed to move batch to Plain Bunker');
-            console.error(' Move error:', error);
+            console.error('Move error:', error);
         } finally {
             setLoading(false);
-            setTimeout(() => {
-                isSavingRef.current = false;
-            }, 1000);
+            setTimeout(() => { isSavingRef.current = false; }, 1000);
         }
     };
 
     const handleBackToSelection = () => {
         setCurrentBatch(null);
+        setSelectedBunkerId('');
+        setBunkers([]);
         router.push('/soaking');
         setError(null);
         setInitialBatchNumber(null);
@@ -1368,6 +1333,9 @@ export default function SoakingContent() {
 
     return (
         <AppLayout title="Soaking Process">
+            <span className="material-count">
+                ({currentBatch.materials.length} material table{currentBatch.materials.length > 1 ? 's' : ''})
+            </span>
             <div className="soaking-container">
                 <div className="entry-header">
                     <div className="header-left">
@@ -1375,11 +1343,28 @@ export default function SoakingContent() {
                             <ArrowBackIcon />
                         </button>
                         <h2>{currentBatch.batchNumber}</h2>
-                        <span className="material-count">
-                            ({currentBatch.materials.length} material table{currentBatch.materials.length > 1 ? 's' : ''})
-                        </span>
                     </div>
                     <div className="header-actions">
+                        <div className="move-to-plain-bunker-dropdown">
+                            <label htmlFor="bunkerSelect">Bunker:</label>
+                            <select
+                                id="bunkerSelect"
+                                value={selectedBunkerId}
+                                onChange={(e) => setSelectedBunkerId(e.target.value)}
+                                className="plain-bunker-select"
+                                disabled={loading || bunkersLoading}
+                            >
+                                <option value="" disabled>
+                                    {bunkersLoading ? 'Loading bunkers...' : 'Select Bunker'}
+                                </option>
+                                {bunkers.filter((bunker) => !bunker.is_active).map((bunker) => (
+                                    <option key={bunker.id} value={bunker.id}>
+                                        {bunker.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="move-to-plain-bunker-dropdown">
                             <label htmlFor="plainBunkerSelect">Mix Two Materials:</label>
                             <select
@@ -1394,6 +1379,7 @@ export default function SoakingContent() {
                                 <option value="no">No</option>
                             </select>
                         </div>
+
                         <button
                             onClick={handleSave}
                             className="btn-save"
@@ -1426,4 +1412,3 @@ export default function SoakingContent() {
         </AppLayout>
     );
 }
-
