@@ -1268,7 +1268,6 @@ export default function BatchReportsContent() {
                             <FormulationTable entries={batchData.formulation_entries || []} batchData={batchData} />
                             <OperationTimelineTable operationData={batchData.operation_timeline || {}} />
 
-                            {/* Chart 1 — Bunker temperature trend (captured by bunkerChartRef) */}
                             <div ref={bunkerChartRef}>
                                 {temperatureData.length > 0 ? (
                                     <TemperatureChart data={temperatureData} selectedStage={selectedStage} onStageChange={setSelectedStage} />
@@ -1281,12 +1280,10 @@ export default function BatchReportsContent() {
                                 )}
                             </div>
 
-                            {/* Chart 2 — Average temperature by stage (captured by avgChartRef) */}
                             <div ref={avgChartRef}>
                                 <AverageTemperatureChart stageAverages={stageAverages} />
                             </div>
 
-                            {/* Chart 3 — Tunnel process temperature (captured by tunnelChartRef) */}
                             <div ref={tunnelChartRef}>
                                 <TunnelTemperatureChart tunnelData={tunnelData} />
                             </div>
