@@ -1074,7 +1074,6 @@ export default function BatchReportsContent() {
         setTimeout(() => { printWindow.print(); }, 700);
     };
 
-    // ── Export PDF ────────────────────────────────────────────────────────────
     const handleExportPDF = async () => {
         try {
             if (!batchData) return;
