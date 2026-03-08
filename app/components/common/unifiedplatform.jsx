@@ -1135,7 +1135,7 @@ export default function UnifiedPlatformContent() {
             for (let i = 0; i < currentBatch.materials.length; i++) {
                 const material = currentBatch.materials[i];
 
-                const includePlainBunker = !currentBatch.plainBunkerMixed;
+    const includePlainBunker = currentBatch.plainBunkerMixed === true;
 
                 if (hasCompleteMaterialData(material, includePlainBunker)) {
                     const payload = convertToApiPayload(currentBatch, material, false);
@@ -1229,7 +1229,7 @@ export default function UnifiedPlatformContent() {
         );
     }
 
-    const showPlainBunker = !currentBatch.plainBunkerMixed;
+const showPlainBunker = currentBatch.plainBunkerMixed === true;
 
     return (
         <AppLayout title="Unified Platform Process">
@@ -1259,15 +1259,27 @@ export default function UnifiedPlatformContent() {
                     </div>
                 </div>
 
-                {currentBatch.materials.map((material, index) => (
+                {currentBatch.plainBunkerMixed === true ? (
+                    // Mixed: show only one table with Plain Bunker row
                     <MaterialTable
-                        key={`${material.type}-${index}-${material.recordId || 'new'}`}
-                        material={material}
-                        onUpdate={(updated) => handleUpdateMaterial(index, updated)}
-                        showPlainBunker={showPlainBunker}
+                        key={`${currentBatch.materials[0].type}-0-${currentBatch.materials[0].recordId || 'new'}`}
+                        material={currentBatch.materials[0]}
+                        onUpdate={(updated) => handleUpdateMaterial(0, updated)}
+                        showPlainBunker={true}
                         readOnly={false}
                     />
-                ))}
+                ) : (
+                    // Not mixed: show all material tables without Plain Bunker row
+                    currentBatch.materials.map((material, index) => (
+                        <MaterialTable
+                            key={`${material.type}-${index}-${material.recordId || 'new'}`}
+                            material={material}
+                            onUpdate={(updated) => handleUpdateMaterial(index, updated)}
+                            showPlainBunker={false}
+                            readOnly={false}
+                        />
+                    ))
+                )}
             </div>
         </AppLayout>
     );

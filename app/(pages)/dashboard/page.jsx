@@ -73,7 +73,7 @@ function BatchStatusCard({ batch }) {
   return (
     <div 
       className="batch-status-card clickable-card" 
-      onClick={handleCardClick}
+      // onClick={handleCardClick}
       style={{
         backgroundColor: batch.currentStage === "Resting" && batch.isRestingTooLong ? "#fff3cd" : "white",
         border: batch.currentStage === "Resting" && batch.isRestingTooLong ? "1px solid #ffc107" : "1px solid #e5e7eb",
@@ -211,7 +211,7 @@ function DashboardContent() {
         {/* Card 1 - Batches in Platform */}
         <div 
           className="stat-card stat-accent clickable-card" 
-          onClick={() => router.push("/batches-platform")}
+          // onClick={() => router.push("/batches-platform")}
           style={{ cursor: "pointer" }}
         >
           <div className="stat-label">Batches in Platform</div>
@@ -222,7 +222,7 @@ function DashboardContent() {
         {/* Card 2 - Batches in Bunker */}
         <div 
           className="stat-card stat-accent-2 clickable-card" 
-          onClick={() => router.push("/batches-bunker")}
+          // onClick={() => router.push("/batches-bunker")}
           style={{ cursor: "pointer" }}
         >
           <div className="stat-label">Batches in Bunker</div>
@@ -233,7 +233,7 @@ function DashboardContent() {
         {/* Card 3 - Batches in Tunnel */}
         <div 
           className="stat-card stat-accent-3 clickable-card" 
-          onClick={() => router.push("/batches-tunnel")}
+          // onClick={() => router.push("/batches-tunnel")}
           style={{ cursor: "pointer" }}
         >
           <div className="stat-label">Batches in Tunnel</div>
@@ -254,7 +254,7 @@ function DashboardContent() {
             Platform Batches - Current Status
           </h2>
           <button 
-            onClick={fetchPlatformBatches}
+            // onClick={fetchPlatformBatches}
             className="btn-secondary"
             style={{ padding: "6px 12px", fontSize: "0.875rem" }}
           >

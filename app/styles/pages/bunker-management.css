@@ -397,3 +397,46 @@
     flex: 1;
   }
 }
+
+.top-scroll-bar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 4px;
+    background: transparent;
+}
+
+.top-scroll-bar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.top-scroll-bar::-webkit-scrollbar-track {
+    background: #e8edf3;
+    border-radius: 8px;
+    border: 1px solid #d1dae6;
+}
+
+.top-scroll-bar::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #4a90d9, #2b6cb0);
+    border-radius: 8px;
+    border: 1px solid #2b6cb0;
+    min-width: 40px;
+}
+
+.top-scroll-bar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #2b6cb0, #1a4f8a);
+    cursor: grab;
+}
+
+.top-scroll-bar::-webkit-scrollbar-thumb:active {
+    cursor: grabbing;
+    background: #1a4f8a;
+}
+
+.top-scroll-bar {
+    scrollbar-width: thin;
+    scrollbar-color: #4a90d9 #e8edf3;
+}
